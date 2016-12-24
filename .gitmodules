@@ -1,0 +1,6 @@
+[submodule "kernel"]
+	path = kernel
+	url = https://github.com/C4-OS/C4-kernel.git
+[submodule "sigma0"]
+	path = sigma0
+	url = https://github.com/C4-OS/sigma0.git

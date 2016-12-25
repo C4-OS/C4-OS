@@ -4,3 +4,6 @@
 [submodule "sigma0"]
 	path = sigma0
 	url = https://github.com/C4-OS/sigma0.git
+[submodule "programs/initprogs"]
+	path = programs/initprogs
+	url = https://github.com/C4-OS/initprogs.git

@@ -16,7 +16,7 @@ void _start( void *data ){
 	while ( true ){
 		c4_msg_recieve_async( &msg, MESSAGE_ASYNC_BLOCK );
 
-		unsigned scancode = c4_inbyte( 0x60 );
+		unsigned scancode = c4_in_byte( 0x60 );
 		bool     key_up   = !!(scancode & 0x80);
 
 		scancode &= ~0x80;

@@ -1,9 +1,25 @@
-#include <sigma0/sigma0.h>
-#include <c4/arch/interrupts.h>
-#include <stdint.h>
-#include <stdbool.h>
+/* cflags for compiling this are:
+  -Wall -g -O2 -ffreestanding -nostdlib -nodefaultlibs \
+     -nostartfiles -fno-builtin $(KERNEL_INCLUDE)
+ */
 
-static inline uint8_t c4_inbyte( unsigned port ){
+#include <c4/arch/interrupts.h>
+#include <c4/syscall.h>
+#include <c4/message.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#define NULL ((void *)0)
+
+#define DO_SYSCALL(N, A, B, C, D, RET) \
+	asm volatile ( " \
+		int $0x60;     \
+		mov %%eax, %0  \
+	" : "=a"(RET) \
+	  : "a"(N), "D"(A), "S"(B), "d"(C), "b"(D) \
+	  : "memory" );
+
+uint8_t c4_inbyte( unsigned port ){
 	int ret;
 
 	DO_SYSCALL( SYSCALL_IOPORT, SYSCALL_IO_INPUT, port, 0, 0, ret );
@@ -11,7 +27,7 @@ static inline uint8_t c4_inbyte( unsigned port ){
 	return ret;
 }
 
-static inline void c4_outbyte( unsigned port, uint8_t value ){
+void c4_outbyte( unsigned port, uint8_t value ){
 	int ret;
 
 	DO_SYSCALL( SYSCALL_IOPORT, SYSCALL_IO_OUTPUT, port, value, 0, ret );

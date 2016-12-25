@@ -8,11 +8,11 @@ ALL_LIBRARIES =
 
 # include recipes provided by each program
 -include $(wildcard $(PROGRAM_ROOT)/*/objs.mk)
-# and for each libraries
+# and for each library
 -include $(wildcard $(LIBRARY_ROOT)/*/objs.mk)
 
-ALL_TARGETS   = kernel sigma0 $(ALL_PROGRAMS) $(ALL_LIBRARIES)
-ALL_CLEAN     = kernel-clean sigma0-clean
+ALL_TARGETS  += kernel sigma0 $(ALL_PROGRAMS)
+ALL_CLEAN    += kernel-clean sigma0-clean
 
 .PHONY: all
 all: $(ALL_TARGETS)
@@ -21,6 +21,7 @@ $(BUILD):
 	mkdir -p $(BUILD)
 	mkdir -p $(BUILD)/bin
 	mkdir -p $(BUILD)/src
+	mkdir -p $(BUILD)/libs
 
 $(BUILD)/c4-$(ARCH): $(BUILD)
 	@cd kernel; \

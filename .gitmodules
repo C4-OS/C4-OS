@@ -7,3 +7,6 @@
 [submodule "programs/initprogs"]
 	path = programs/initprogs
 	url = https://github.com/C4-OS/initprogs.git
+[submodule "libraries/c4rt"]
+	path = libraries/c4rt
+	url = https://github.com/C4-OS/c4rt.git

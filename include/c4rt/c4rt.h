@@ -31,7 +31,11 @@ void *c4_request_physical( uintptr_t virt,
                            unsigned size,
                            unsigned permissions );
 
-uint8_t c4_inbyte( unsigned port );
-void    c4_outbyte( unsigned port, uint8_t value );
+uint8_t  c4_in_byte( unsigned port );
+uint16_t c4_in_word( unsigned port );
+uint32_t c4_in_dword( unsigned port );
+void     c4_out_byte( unsigned port, uint8_t value );
+void     c4_out_word( unsigned port, uint16_t value );
+void     c4_out_dword( unsigned port, uint32_t value );
 
 #endif

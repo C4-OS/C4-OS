@@ -1,10 +1,12 @@
-$(BUILD)/bin/keyboard: $(PROGRAM_ROOT)/initprogs/src/keyboard.o
-	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@
+initprog-libs = $(BUILD)/libs/c4rt.a
 
-$(BUILD)/bin/test: $(PROGRAM_ROOT)/initprogs/src/test.o
+$(BUILD)/bin/keyboard: $(PROGRAM_ROOT)/initprogs/src/keyboard.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@
+	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+
+$(BUILD)/bin/test: $(PROGRAM_ROOT)/initprogs/src/test.o $(initprog-libs)
+	@echo CC $^ -o $@
+	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
 
 .PHONY: initprogs-keyboard-clean
 initprogs-keyboard-clean:

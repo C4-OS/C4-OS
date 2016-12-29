@@ -29,7 +29,7 @@ $(BUILD)/c4-$(ARCH): $(BUILD)
 		cp c4-$(ARCH) $@
 
 $(BUILD)/initfs.tar: $(BUILD) $(ALL_PROGRAMS)
-	cd $(BUILD); tar c . > $@
+	cd $(BUILD); tar c ./bin > $@
 
 $(BUILD)/c4-$(ARCH)-sigma0: $(BUILD)/initfs.tar
 	@cd sigma0; \
@@ -43,6 +43,7 @@ kernel: $(BUILD)/c4-$(ARCH)
 .PHONY: kernel-clean
 kernel-clean:
 	cd kernel; make clean ARCH=$(ARCH)
+	rm -f $(BUILD)/c4-$(ARCH)
 
 .PHONY: sigma0
 sigma0: $(BUILD)/c4-$(ARCH)-sigma0
@@ -60,4 +61,4 @@ test:
 	qemu-system-i386 \
 		-kernel $(BUILD)/c4-$(ARCH) \
 		-initrd $(BUILD)/c4-$(ARCH)-sigma0 \
-		-serial stdio -m 32
+		-serial stdio -m 32 -s

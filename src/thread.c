@@ -1,5 +1,11 @@
 #include <c4rt/c4rt.h>
 
+void c4_exit( void ){
+	int unused = 0;
+
+	DO_SYSCALL( SYSCALL_EXIT, 0, 0, 0, 0, unused );
+}
+
 int c4_create_thread( void *entry, void *stack, unsigned flags ){
 	int ret = 0;
 

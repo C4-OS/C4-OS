@@ -238,8 +238,5 @@ static void pci_dump_devices( void ){
 void _start( void *unused ){
 	pci_dump_devices( );
 
-	for (;;){
-		message_t temp;
-		c4_msg_recieve( &temp, 0 );
-	}
+	c4_exit();
 }

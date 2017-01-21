@@ -19,3 +19,12 @@ int c4_continue_thread( unsigned thread ){
 
 	return c4_msg_send( &buf, thread );
 }
+
+int c4_set_pager( unsigned thread, unsigned pager ){
+	message_t buf = {
+		.type = MESSAGE_TYPE_SET_PAGER,
+		.data = { pager },
+	};
+
+	return c4_msg_send( &buf, thread );
+}

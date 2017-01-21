@@ -22,6 +22,7 @@ int c4_msg_send_async( message_t *buffer, unsigned target );
 int c4_msg_recieve_async( message_t *buffer, unsigned flags );
 int c4_create_thread( void *entry, void *stack, unsigned flags );
 int c4_continue_thread( unsigned thread );
+int c4_set_pager( unsigned thread, unsigned pager );
 
 int c4_mem_map_to( unsigned thread_id, void *from, void *to,
                    unsigned size, unsigned permissions );

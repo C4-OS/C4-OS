@@ -11,6 +11,10 @@ void _start( void *data ){
 		.data = { INTERRUPT_KEYBOARD, },
 	};
 
+	// read input port in case there was a keypress interrupt before
+	// the driver had a chance to handle it
+	c4_in_byte( 0x60 );
+
 	c4_msg_send( &msg, 0 );
 
 	while ( true ){

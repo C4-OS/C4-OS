@@ -10,3 +10,6 @@
 [submodule "libraries/c4rt"]
 	path = libraries/c4rt
 	url = https://github.com/C4-OS/c4rt.git
+[submodule "programs/nameserver"]
+	path = programs/nameserver
+	url = https://github.com/C4-OS/nameserver.git

@@ -18,20 +18,23 @@ enum {
 static name_entry_t names[MAX_NAME_ENTRIES];
 
 static void putchar( char c ){
-	unsigned display = 3;
-
 	message_t msg = {
-		.type = 0xbabe,
+		.type = MESSAGE_TYPE_DEBUG_PUTCHAR,
 		.data = { c },
 	};
 
-	c4_msg_send( &msg, display );
+	c4_msg_send( &msg, 0 );
 }
 
-static void puts( const char *s ){
+static void do_puts( const char *s ){
 	for ( ; *s; s++ ){
 		putchar(*s);
 	}
+}
+
+static void puts( const char *s ){
+	do_puts( "--- nameserver: " );
+	do_puts( s );
 }
 
 void bind_name( unsigned long thread, unsigned long name ){

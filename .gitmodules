@@ -4,9 +4,6 @@
 [submodule "sigma0"]
 	path = sigma0
 	url = https://github.com/C4-OS/sigma0.git
-[submodule "programs/nameserver"]
-	path = programs/nameserver
-	url = https://github.com/C4-OS/nameserver.git
 [submodule "libraries/miniforth"]
 	path = libraries/miniforth
 	url = https://github.com/mushrom/miniforth.git

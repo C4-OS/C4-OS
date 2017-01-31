@@ -1,5 +1,8 @@
 #include <c4rt/c4rt.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+unsigned long display = 0;
 
 // PCI io ports
 enum {
@@ -76,9 +79,12 @@ enum {
 	PCI_CONFIG_MAX_LAT     = 0x3f
 };
 
-static void putchar( char c ){
-	unsigned display = 3;
+typedef struct pci_device {
+	uint8_t bus, slot, func;
+	bool valid;
+} pci_device_t;
 
+static void putchar( char c ){
 	message_t msg = {
 		.type = 0xbabe,
 		.data = { c },
@@ -135,14 +141,29 @@ static void print_hex( unsigned n ){
 	}
 }
 
-static uint32_t pci_conf_read_dword( uint32_t bus,
-                                     uint32_t slot,
-                                     uint32_t func,
-                                     uint32_t offset )
+static inline pci_device_t pci_device( uint8_t bus,
+                                       uint8_t slot,
+                                       uint8_t func )
+{
+	return (pci_device_t){
+		.bus   = bus,
+		.slot  = slot,
+		.func  = func,
+		.valid = true,
+	};
+}
+
+static inline pci_device_t pci_invalid_device( void ){
+	return (pci_device_t){
+		.valid = false,
+	};
+}
+
+static uint32_t pci_conf_read_dword( pci_device_t dev, uint32_t offset )
 {
 	uint32_t address = 0x80000000;
 
-	address |= (bus << 16) | (slot << 11) | (func << 8);
+	address |= (dev.bus << 16) | (dev.slot << 11) | (dev.func << 8);
 	address |= (offset & 0xfc);
 
 	c4_out_dword( PCI_CONFIG_ADDRESS, address );
@@ -150,22 +171,16 @@ static uint32_t pci_conf_read_dword( uint32_t bus,
 	return c4_in_dword( PCI_CONFIG_DATA );
 }
 
-static inline uint16_t pci_conf_read_word( uint32_t bus,
-                                           uint32_t slot,
-                                           uint32_t func,
-                                           uint32_t offset )
+static inline uint16_t pci_conf_read_word( pci_device_t dev, uint32_t offset )
 {
-	uint32_t temp = pci_conf_read_dword( bus, slot, func, offset );
+	uint32_t temp = pci_conf_read_dword( dev, offset );
 
 	return temp >> (offset % 4 * 8);
 }
 
-static inline uint8_t pci_conf_read_byte( uint32_t bus,
-                                          uint32_t slot,
-                                          uint32_t func,
-                                          uint32_t offset )
+static inline uint8_t pci_conf_read_byte( pci_device_t dev, uint32_t offset )
 {
-	uint32_t temp = pci_conf_read_dword( bus, slot, func, offset );
+	uint32_t temp = pci_conf_read_dword( dev, offset );
 
 	return temp >> (offset % 4 * 8);
 }
@@ -198,8 +213,8 @@ static void pci_dump_devices( void ){
 	for ( unsigned bus = 0; bus < 256; bus++ ){
 		for ( unsigned device = 0; device < 32; device++ ){
 			for ( unsigned function = 0; function < 7; function++ ){
-				uint16_t vendor = pci_conf_read_word( bus, device, function,
-				                                      PCI_CONFIG_VENDOR );
+				pci_device_t dev = pci_device( bus, device, function );
+				uint16_t vendor = pci_conf_read_word( dev, PCI_CONFIG_VENDOR );
 
 				if ( vendor == 0xffff ){
 					if ( function == 0 )
@@ -208,11 +223,8 @@ static void pci_dump_devices( void ){
 					continue;
 				} 
 
-				uint16_t device_id = pci_conf_read_word( bus, device, function,
-				                                         PCI_CONFIG_DEVICE );
-
-				uint16_t class_id = pci_conf_read_word( bus, device, function,
-				                                        PCI_CONFIG_CLASS );
+				uint16_t device_id = pci_conf_read_word( dev, PCI_CONFIG_DEVICE );
+				uint16_t class_id  = pci_conf_read_word( dev, PCI_CONFIG_CLASS );
 
 				puts( "[pci] " );
 				print_hex( bus );
@@ -235,8 +247,71 @@ static void pci_dump_devices( void ){
 	}
 }
 
-void _start( void *unused ){
+static pci_device_t pci_lookup( uint16_t vendor_id, uint16_t device_id ){
+	for ( unsigned bus = 0; bus < 256; bus++ ){
+		for ( unsigned device = 0; device < 32; device++ ){
+			for ( unsigned function = 0; function < 7; function++ ){
+				pci_device_t dev = pci_device( bus, device, function );
+				uint16_t vendor = pci_conf_read_word( dev, PCI_CONFIG_VENDOR );
+
+				if ( vendor == 0xffff ){
+					if ( function == 0 )
+						break;
+					// no device, continue checking for others
+					continue;
+				}
+
+				uint16_t dev_id = pci_conf_read_word( dev, PCI_CONFIG_DEVICE );
+
+				if ( vendor_id == vendor && device_id == dev_id ){
+					return pci_device( bus, device, function );
+				}
+			}
+		}
+	}
+
+	return pci_invalid_device( );
+}
+
+enum {
+	NAME_BIND = 0x1024,
+	NAME_UNBIND,
+	NAME_LOOKUP,
+	NAME_RESULT,
+};
+
+unsigned hash_string( const char *str ){
+	unsigned hash = 757;
+	int c;
+
+	while (( c = *str++ )){
+		hash = ((hash << 7) + hash + c);
+	}
+
+	return hash;
+}
+
+static inline unsigned nameserver_lookup( unsigned server, const char *name ){
+	message_t msg = {
+		.type = NAME_LOOKUP,
+		.data = { hash_string(name) },
+	};
+
+	c4_msg_send( &msg, server );
+	c4_msg_recieve( &msg, server );
+
+	return msg.data[0];
+}
+
+void _start( unsigned long ndisplay ){
+	display = ndisplay;
+
 	pci_dump_devices( );
+	pci_device_t foo = pci_lookup( 0x10ec, 0x8139 );
+
+	if ( foo.valid ){
+		puts( "found a realtek 8139 network card" );
+	}
 
 	c4_exit();
 }

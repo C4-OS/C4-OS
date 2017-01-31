@@ -306,6 +306,12 @@ static inline unsigned nameserver_lookup( unsigned server, const char *name ){
 void _start( unsigned long ndisplay ){
 	display = ndisplay;
 
+	puts( "hello, pci at thread " );
+	print_num( c4_get_id( ));
+	puts( ", pager: " );
+	print_num( c4_get_pager( ));
+	puts( "\n" );
+
 	pci_dump_devices( );
 	pci_device_t foo = pci_lookup( 0x10ec, 0x8139 );
 

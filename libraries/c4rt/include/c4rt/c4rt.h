@@ -36,6 +36,8 @@ void *c4_request_physical( uintptr_t virt,
                            unsigned size,
                            unsigned permissions );
 
+void *c4_request_page( unsigned pager, uintptr_t virt, unsigned permissions );
+
 uint8_t  c4_in_byte( unsigned port );
 uint16_t c4_in_word( unsigned port );
 uint32_t c4_in_dword( unsigned port );

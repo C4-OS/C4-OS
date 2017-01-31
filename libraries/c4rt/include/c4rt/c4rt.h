@@ -45,4 +45,21 @@ void     c4_out_byte( unsigned port, uint8_t value );
 void     c4_out_word( unsigned port, uint16_t value );
 void     c4_out_dword( unsigned port, uint32_t value );
 
+// debugging tools
+#ifndef NDEBUG
+#define C4_ASSERT(CONDITION) { \
+		if ( !(CONDITION) ){ \
+			c4_debug_printf( "%s:%u: assertion \"" #CONDITION "\" failed\n", \
+				__FILE__, __LINE__ ); \
+		} \
+	}
+
+#else
+#define C4_ASSERT(CONDITION) /* CONDITION */
+#endif
+
+void c4_debug_putchar( char c );
+void c4_debug_puts( const char *str );
+void c4_debug_printf( const char *format, ... );
+
 #endif

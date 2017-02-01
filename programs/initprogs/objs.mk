@@ -29,6 +29,11 @@ $(BUILD)/bin/ipcbench: $(PROGRAM_ROOT)/initprogs/src/ipcbench.o $(initprog-libs)
 	@echo CC $^ -o $@
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
 
+$(BUILD)/bin/alloctest: $(PROGRAM_ROOT)/initprogs/src/alloctest.o $(initprog-libs)
+	@echo CC $^ -o $@
+	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+
+
 .PHONY: initprogs-keyboard-clean
 initprogs-keyboard-clean:
 	rm -f $(BUILD)/bin/keyboard
@@ -64,6 +69,11 @@ initprogs-ipcbench-clean:
 	rm -f $(BUILD)/bin/ipcbench
 	rm -f $(PROGRAM_ROOT)/initprogs/src/ipcbench.o
 
+.PHONY: initprogs-alloctest-clean
+initprogs-alloctest-clean:
+	rm -f $(BUILD)/bin/alloctest
+	rm -f $(PROGRAM_ROOT)/initprogs/src/alloctest.o
+
 ALL_PROGRAMS += $(BUILD)/bin/keyboard
 ALL_PROGRAMS += $(BUILD)/bin/test
 ALL_PROGRAMS += $(BUILD)/bin/pci
@@ -71,6 +81,7 @@ ALL_PROGRAMS += $(BUILD)/bin/faulter
 ALL_PROGRAMS += $(BUILD)/bin/forth
 ALL_PROGRAMS += $(BUILD)/bin/display
 ALL_PROGRAMS += $(BUILD)/bin/ipcbench
+ALL_PROGRAMS += $(BUILD)/bin/alloctest
 ALL_CLEAN    += initprogs-keyboard-clean
 ALL_CLEAN    += initprogs-test-clean
 ALL_CLEAN    += initprogs-pci-clean
@@ -78,3 +89,4 @@ ALL_CLEAN    += initprogs-faulter-clean
 ALL_CLEAN    += initprogs-forth-clean
 ALL_CLEAN    += initprogs-display-clean
 ALL_CLEAN    += initprogs-ipcbench-clean
+ALL_CLEAN    += initprogs-alloctest-clean

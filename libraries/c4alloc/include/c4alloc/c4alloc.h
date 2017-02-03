@@ -14,10 +14,16 @@ enum {
 };
 
 typedef struct c4a_node {
+	// bucket links
 	struct c4a_node *previous;
 	struct c4a_node *next;
-	unsigned status;
-	unsigned bucket;
+
+	// list links
+	struct c4a_node *phys_next;
+	struct c4a_node *phys_prev;
+
+	uint16_t status;
+	uint16_t bucket;
 } c4a_node_t;
 
 typedef struct c4a_bucket {
@@ -25,6 +31,8 @@ typedef struct c4a_bucket {
 } c4a_bucket_t;
 
 typedef struct c4a_heap {
+	// TODO: look into ways of implementing heap canaries by storing a field of
+	//       random data in blocks, both for debugging and security reasons
 	uintptr_t start;
 	unsigned  pages;
 

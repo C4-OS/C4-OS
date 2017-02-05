@@ -10,9 +10,12 @@ ALL_LIBRARIES =
 -include $(wildcard $(PROGRAM_ROOT)/*/objs.mk)
 # and for each library
 -include $(wildcard $(LIBRARY_ROOT)/*/objs.mk)
+# and for sigma0 (this should be moved to the programs folder)
+-include sigma0/objs.mk
 
 ALL_TARGETS  += kernel sigma0 $(ALL_PROGRAMS)
-ALL_CLEAN    += kernel-clean sigma0-clean
+#ALL_CLEAN    += kernel-clean sigma0-clean
+ALL_CLEAN    += kernel-clean
 
 .PHONY: all
 all: $(ALL_TARGETS)
@@ -31,12 +34,6 @@ $(BUILD)/c4-$(ARCH): $(BUILD)
 $(BUILD)/initfs.tar: $(BUILD) $(ALL_PROGRAMS)
 	cd $(BUILD); tar c ./bin > $@
 
-$(BUILD)/c4-$(ARCH)-sigma0: $(BUILD)/initfs.tar
-	@cd sigma0; \
-		make CROSS=$(CROSS) ARCH=$(ARCH) CROSS=$(CROSS) \
-			 KERNEL_ROOT=$(PWD)/kernel INITFS_TARBALL=$(BUILD)/initfs.tar; \
-		cp c4-$(ARCH)-sigma0 $@
-
 .PHONY: kernel
 kernel: $(BUILD)/c4-$(ARCH)
 
@@ -47,10 +44,6 @@ kernel-clean:
 
 .PHONY: sigma0
 sigma0: $(BUILD)/c4-$(ARCH)-sigma0
-
-.PHONY: sigma0-clean
-sigma0-clean:
-	cd sigma0; make clean ARCH=$(ARCH)
 
 .PHONY: clean
 clean: $(ALL_CLEAN)

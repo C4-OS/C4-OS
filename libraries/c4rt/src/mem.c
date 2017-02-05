@@ -71,3 +71,12 @@ int c4_mem_grant_to( unsigned thread_id,
 
 	return c4_msg_send( &msg, thread_id );
 }
+
+void c4_dump_maps( unsigned thread ){
+	message_t msg = {
+		.type = MESSAGE_TYPE_DUMP_MAPS,
+		.data = { thread },
+	};
+
+	c4_msg_send( &msg, thread );
+}

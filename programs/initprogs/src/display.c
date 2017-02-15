@@ -1,5 +1,6 @@
 #include <c4rt/c4rt.h>
 #include <c4/paging.h>
+#include <c4/bootinfo.h>
 #include <c4/arch/interrupts.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -85,9 +86,14 @@ static inline void do_newline( vga_state_t *state ){
 	state->x = 0;
 }
 
+static bootinfo_t *c4_bootinfo = BOOTINFO_ADDR;
+static void framebuffer_init( void );
+
 void _start( uintptr_t nameserver ){
 	static const uint8_t color = 0x17;
 	message_t msg;
+
+	framebuffer_init();
 
 	vga_state_t state = {
 		.textbuf = (void *)0xb8000,
@@ -127,6 +133,30 @@ void _start( uintptr_t nameserver ){
 
 			if ( state.x++ >= WIDTH ){
 				do_newline( &state );
+			}
+		}
+	}
+}
+
+static void framebuffer_init( void ){
+	if ( c4_bootinfo->framebuffer.exists ){
+		unsigned size =
+			c4_bootinfo->framebuffer.width *
+			c4_bootinfo->framebuffer.height *
+			4;
+
+		c4_request_physical( 0xfb000000,
+		                     c4_bootinfo->framebuffer.addr,
+		                     size / PAGE_SIZE + 1,
+		                     PAGE_READ | PAGE_WRITE );
+
+		uint32_t *fb = (void *)0xfb000000;
+
+		for ( unsigned y = 0; y < c4_bootinfo->framebuffer.height; y++ ){
+			for ( unsigned x = 0; x < c4_bootinfo->framebuffer.width; x++ ){
+				unsigned index = y * c4_bootinfo->framebuffer.width + x;
+
+				fb[index] = ((y & 0xff) << 16) | ((x & 0xff) << 8) | (x ^ y);
 			}
 		}
 	}

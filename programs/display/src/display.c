@@ -19,10 +19,26 @@ enum {
 	VGA_TEXT_COLOR  = 0x17,
 };
 
+enum {
+	GRAPHIC_FOREGROUND = 0xd0d0d0,
+	GRAPHIC_BACKGROUND = 0x181818,
+};
+
 typedef struct vga_char {
 	uint8_t text;
 	uint8_t color;
 } vga_char_t;
+
+typedef struct psf2_header {
+    uint8_t  magic[4];
+    uint32_t version;
+    uint32_t header_size;
+    uint32_t flags;
+    uint32_t length;
+    uint32_t charsize;
+    uint32_t height;
+    uint32_t width;
+} __attribute__((packed)) psf2_header_t;
 
 typedef struct display {
 	union {
@@ -43,6 +59,9 @@ typedef struct display {
 	unsigned width;
 	unsigned height;
 } display_t;
+
+extern psf2_header_t display_font;
+extern unsigned long display_font_size;
 
 unsigned hash_string( const char *str ){
 	unsigned hash = 757;
@@ -94,7 +113,27 @@ static inline void framebuf_draw_char( display_t *state,
                                        unsigned y,
                                        char c )
 {
-	c4_debug_putchar( c );
+	uint8_t *bitmap = (uint8_t *)&display_font + display_font.header_size;
+	unsigned mod = 1 << (display_font.width + 1);
+
+	unsigned meh  = x * display_font.width;
+	unsigned blah = y * c4_bootinfo->framebuffer.width * display_font.height;
+	uint32_t *place = state->pixelbuf + blah + meh;
+
+	for ( unsigned iy = 0; iy < display_font.height; iy++ ){
+		for ( unsigned ix = 0; ix < display_font.width; ix++ ){
+			if ( bitmap[c * display_font.charsize + iy] & (mod >> ix)){
+				*place = GRAPHIC_FOREGROUND;
+
+			} else {
+				*place = GRAPHIC_BACKGROUND;
+			}
+
+			place += 1;
+		}
+
+		place += c4_bootinfo->framebuffer.width - display_font.width;
+	}
 }
 
 static inline void framebuf_clear( display_t *state ){
@@ -102,7 +141,17 @@ static inline void framebuf_clear( display_t *state ){
 }
 
 static inline void framebuf_scroll( display_t *state ){
+	unsigned rowsize = c4_bootinfo->framebuffer.width;
+	unsigned rows    = c4_bootinfo->framebuffer.height - display_font.height - 1;
 
+	for ( unsigned i = 0; i < rows; i++ ){
+		unsigned offset = i * rowsize;
+		unsigned next   = (i + display_font.height) * rowsize;
+
+		for ( uint32_t k = 0; k < rowsize; k++ ){
+			state->pixelbuf[k + offset] = state->pixelbuf[k + next];
+		}
+	}
 }
 
 static void framebuffer_init( display_t *state ){
@@ -115,13 +164,16 @@ static void framebuffer_init( display_t *state ){
 		.pixelbuf = (void *)0xfb000000,
 		.x        = 0,
 		.y        = 0,
-		.width    = 80,
-		.height   = 25,
+		.width    = c4_bootinfo->framebuffer.width  / display_font.width,
+		.height   = c4_bootinfo->framebuffer.height / display_font.height - 1,
 
 		.draw_char = framebuf_draw_char,
 		.scroll    = framebuf_scroll,
 		.clear     = framebuf_clear,
 	};
+
+	c4_debug_printf( "--- display: text buffer of %ux%u\n",
+		state->width, state->height );
 
 	c4_request_physical( 0xfb000000,
 	                     c4_bootinfo->framebuffer.addr,
@@ -134,7 +186,8 @@ static void framebuffer_init( display_t *state ){
 		for ( unsigned x = 0; x < c4_bootinfo->framebuffer.width; x++ ){
 			unsigned index = y * c4_bootinfo->framebuffer.width + x;
 
-			fb[index] = ((y & 0xff) << 16) | ((x & 0xff) << 8) | (x ^ y);
+			fb[index] = 0x202000 | x ^ y;
+			//fb[index] = GRAPHIC_BACKGROUND;
 		}
 	}
 }

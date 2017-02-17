@@ -2,16 +2,10 @@
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
 #include <stdint.h>
+#include <nameserver/nameserver.h>
 
 static unsigned display = 0;
 static unsigned keyboard = 0;
-
-enum {
-	NAME_BIND = 0x1024,
-	NAME_UNBIND,
-	NAME_LOOKUP,
-	NAME_RESULT,
-};
 
 static void putchar( char c ){
 	message_t msg = {
@@ -26,29 +20,6 @@ static void debug_print( const char *s ){
 	for ( ; *s; s++ ){
 		putchar(*s);
 	}
-}
-
-unsigned hash_string( const char *str ){
-	unsigned hash = 757;
-	int c;
-
-	while (( c = *str++ )){
-		hash = ((hash << 7) + hash + c);
-	}
-
-	return hash;
-}
-
-static inline unsigned nameserver_lookup( unsigned server, const char *name ){
-	message_t msg = {
-		.type = NAME_LOOKUP,
-		.data = { hash_string(name) },
-	};
-
-	c4_msg_send( &msg, server );
-	c4_msg_recieve( &msg, server );
-
-	return msg.data[0];
 }
 
 /*

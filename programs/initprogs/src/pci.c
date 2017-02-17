@@ -1,4 +1,5 @@
 #include <c4rt/c4rt.h>
+#include <nameserver/nameserver.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -271,36 +272,6 @@ static pci_device_t pci_lookup( uint16_t vendor_id, uint16_t device_id ){
 	}
 
 	return pci_invalid_device( );
-}
-
-enum {
-	NAME_BIND = 0x1024,
-	NAME_UNBIND,
-	NAME_LOOKUP,
-	NAME_RESULT,
-};
-
-unsigned hash_string( const char *str ){
-	unsigned hash = 757;
-	int c;
-
-	while (( c = *str++ )){
-		hash = ((hash << 7) + hash + c);
-	}
-
-	return hash;
-}
-
-static inline unsigned nameserver_lookup( unsigned server, const char *name ){
-	message_t msg = {
-		.type = NAME_LOOKUP,
-		.data = { hash_string(name) },
-	};
-
-	c4_msg_send( &msg, server );
-	c4_msg_recieve( &msg, server );
-
-	return msg.data[0];
 }
 
 void _start( unsigned long ndisplay ){

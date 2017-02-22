@@ -21,15 +21,16 @@ enum {
 };
 
 // Error codes
+// TODO: check standard to make sure these are correct
 enum {
-	ATA_ERROR_AMNF  = 0x01,
-	ATA_ERROR_TKONF = 0x02,
-	ATA_ERROR_ABORT = 0x04,
-	ATA_ERROR_MCR   = 0x08,
-	ATA_ERROR_IDNF  = 0x10,
-	ATA_ERROR_MC    = 0x20,
-	ATA_ERROR_UNC   = 0x40,
-	ATA_ERROR_BBK   = 0x80
+	ATA_ERROR_NO_ADDR_MARK = 0x01,
+	ATA_ERROR_NO_MEDIA     = 0x02,
+	ATA_ERROR_CMD_ABORTED  = 0x04,
+	ATA_ERROR_MEDIA_ERROR  = 0x08,
+	ATA_ERROR_NO_ID_MARK   = 0x10,
+	ATA_ERROR_ASDF         = 0x20,
+	ATA_ERROR_FATAL_ERROR  = 0x40,
+	ATA_ERROR_BAD_SECTORS  = 0x80
 };
 
 // Command codes
@@ -113,9 +114,9 @@ enum {
 
 // control register values
 enum {
-	ATA_CONTROL_NEIN       = 1 << 1,
-	ATA_CONTROL_SOFT_RESET = 1 << 2,
-	ATA_CONTROL_HOB        = 1 << 7,
+	ATA_CONTROL_DISABLE_INTR = 1 << 1,
+	ATA_CONTROL_SOFT_RESET   = 1 << 2,
+	ATA_CONTROL_HOB          = 1 << 7,
 };
 
 typedef struct ide_channel {

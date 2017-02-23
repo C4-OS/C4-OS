@@ -1,8 +1,10 @@
 #include <ata/ata.h>
+#include <ata/stubs.h>
 #include <c4rt/c4rt.h>
 #include <c4/arch/interrupts.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <nameserver/nameserver.h>
 
 static ide_control_t ide_drives;
 
@@ -35,17 +37,66 @@ void ide_pio_write( ide_device_t *device,
                     unsigned location,
                     unsigned sectors );
 
+void ata_handle_access( message_t *msg );
+
 void _start( uintptr_t nameserver ){
+	nameserver_bind( nameserver, "/dev/ata" );
 	c4_debug_printf( "--- ata: hello, world! thread %u\n", c4_get_id());
+
 	ide_init();
 
 	while ( true ){
 		message_t msg;
 
 		c4_msg_recieve( &msg, 0 );
+		c4_debug_printf( "--- ata: got request from %u\n", msg.sender );
+
+		if ( msg.type == ATA_MSG_READ || msg.type == ATA_MSG_WRITE ){
+			ata_handle_access( &msg );
+		}
 	}
 
 	c4_exit();
+}
+
+void ata_handle_access( message_t *request ){
+	message_t msg = {
+		.type = ATA_MSG_BUFFER,
+		.data = { 0xc0000000 },
+	};
+
+	ide_device_t *device = ide_device( request->data[0] );
+	unsigned location    = request->data[1];
+	unsigned sectors     = request->data[2];
+
+	if ( !device->exists ){
+		msg = (message_t){ .type = ATA_MSG_ERROR };
+		c4_msg_send( &msg, request->sender );
+		return;
+	}
+
+	c4_msg_send( &msg, request->sender );
+	c4_msg_recieve( &msg, request->sender );
+
+	C4_ASSERT( msg.type == MESSAGE_TYPE_MAP_TO );
+	C4_ASSERT( msg.data[0] == 0xc0000000 );
+
+	if ( request->type == ATA_MSG_READ ){
+		c4_debug_printf( "--- ata: reading %u sectors for %u at %x\n",
+				sectors, request->sender, location );
+
+		ide_pio_read( device, (void *)0xc0000000, location, sectors );
+
+	} else {
+		c4_debug_printf( "--- ata: writing %u sectors for %u\n",
+				sectors, request->sender );
+
+		ide_pio_write( device, (void *)0xc0000000, location, sectors );
+	}
+
+	msg = (message_t){ .type = ATA_MSG_COMPLETED, };
+
+	c4_msg_send( &msg, request->sender );
 }
 
 static inline void interrupt_subscribe( unsigned intr ){
@@ -183,8 +234,6 @@ void ide_channel_poll( ide_channel_t *channel ){
 	}
 
 	while ( !ide_channel_ready( channel )){
-		unsigned status = ide_reg_read(channel, ATA_REG_STATUS);
-
 		if ( ide_channel_has_error( channel )){
 			c4_debug_printf( "--- ata: an error! %b\n",
 				ide_reg_read(channel, ATA_REG_ERROR));

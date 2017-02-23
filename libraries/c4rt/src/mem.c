@@ -34,6 +34,15 @@ void *c4_request_page( unsigned pager, uintptr_t virt, unsigned permissions ){
 	return (void *)virt;
 }
 
+int c4_mem_unmap( unsigned thread_id, void *addr ){
+	message_t msg = {
+		.type = MESSAGE_TYPE_UNMAP,
+		.data = (uintptr_t)addr,
+	};
+
+	return c4_msg_send( &msg, thread_id );
+}
+
 int c4_mem_map_to( unsigned thread_id,
                    void *from,
                    void *to,

@@ -26,6 +26,7 @@ int c4_set_pager( unsigned thread, unsigned pager );
 int c4_get_pager( void );
 int c4_get_id( void );
 
+int c4_mem_unmap( unsigned thread_id, void *addr );
 int c4_mem_map_to( unsigned thread_id, void *from, void *to,
                    unsigned size, unsigned permissions );
 int c4_mem_grant_to( unsigned thread_id, void *from, void *to,

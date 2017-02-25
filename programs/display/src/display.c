@@ -1,4 +1,5 @@
 #include <display/display.h>
+#include <interfaces/console.h>
 #include <nameserver/nameserver.h>
 #include <c4rt/c4rt.h>
 #include <c4/paging.h>
@@ -18,6 +19,41 @@ static inline void do_newline( display_t *state ){
 
 static bootinfo_t *c4_bootinfo = BOOTINFO_ADDR;
 
+static void do_draw_char( display_t *state, char c ){
+	if ( c == '\n' ){
+		do_newline( state );
+
+	} else if ( c == '\b' ){
+		state->x--;
+		state->draw_char( state, state->x, state->y, ' ' );
+
+	} else {
+
+		state->draw_char( state, state->x, state->y, c );
+
+		if ( state->x++ >= state->width ){
+			do_newline( state );
+		}
+	}
+}
+
+static void do_set_position( display_t *state, unsigned x, unsigned y ){
+	if ( x < state->width && y < state->height ){
+		state->x = x;
+		state->y = y;
+	}
+
+	// TODO: notify sender of an error
+}
+
+static void do_clear( display_t *state ){
+	for ( unsigned i = 0; i < state->height; i++ ){
+		do_newline( state );
+	}
+
+	do_set_position( state, 0, 0 );
+}
+
 void _start( uintptr_t nameserver ){
 	message_t msg;
 	display_t state;
@@ -34,22 +70,21 @@ void _start( uintptr_t nameserver ){
 	while ( true ){
 		c4_msg_recieve( &msg, 0 );
 
-		char c = msg.data[0];
+		switch ( msg.type ){
+			case CONSOLE_MSG_PUT_CHAR:
+				do_draw_char( &state, msg.data[0] );
+				break;
 
-		if ( c == '\n' ){
-			do_newline( &state );
+			case CONSOLE_MSG_SET_POSITION:
+				do_set_position( &state, msg.data[0], msg.data[1] );
+				break;
 
-		} else if ( c == '\b' ){
-			state.x--;
-			state.draw_char( &state, state.x, state.y, ' ' );
+			case CONSOLE_MSG_CLEAR:
+				do_clear( &state );
+				break;
 
-		} else {
-
-			state.draw_char( &state, state.x, state.y, c );
-
-			if ( state.x++ >= state.width ){
-				do_newline( &state );
-			}
+			default:
+				break;
 		}
 	}
 }

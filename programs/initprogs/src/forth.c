@@ -3,17 +3,13 @@
 #include <miniforth/miniforth.h>
 #include <stdint.h>
 #include <nameserver/nameserver.h>
+#include <interfaces/console.h>
 
 static unsigned display = 0;
 static unsigned keyboard = 0;
 
 static void putchar( char c ){
-	message_t msg = {
-		.type = 0xbabe,
-		.data = { c },
-	};
-
-	c4_msg_send( &msg, display );
+	console_put_char( display, c );
 }
 
 static void debug_print( const char *s ){
@@ -123,16 +119,12 @@ retry:
 
 			c = decode_scancode( msg.data[0] );
 
-			if ( c && msg.data[1] == 0 ){
-				msg.type    = 0xbabe;
-				msg.data[0] = c;
-
-			} else {
+			if ( !c || msg.data[1] != 0 ){
 				goto retry;
 			}
 		}
 
-		c4_msg_send( &msg, display );
+		console_put_char( display, c );
 
 		if ( i && c == '\b' ){
 			i--;
@@ -162,7 +154,7 @@ char minift_get_char( void ){
 		//ptr = input;
 		ptr =
 			": pstring while dup c@ 0 != begin dup c@ emit 1 + repeat ; "
-			"\"hellow, world!\" pstring cr"
+			"\"hellow, world!\" pstring cr\n"
 		;
 
 		initialized = true;
@@ -177,12 +169,7 @@ char minift_get_char( void ){
 }
 
 void minift_put_char( char c ){
-	message_t msg;
-
-	msg.type    = 0xbabe;
-	msg.data[0] = c;
-
-	c4_msg_send( &msg, display );
+	console_put_char( display, c );
 }
 
 void _start( uintptr_t nameserver ){

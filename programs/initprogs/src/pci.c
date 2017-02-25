@@ -1,5 +1,6 @@
 #include <c4rt/c4rt.h>
 #include <nameserver/nameserver.h>
+#include <interfaces/console.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -86,12 +87,7 @@ typedef struct pci_device {
 } pci_device_t;
 
 static void putchar( char c ){
-	message_t msg = {
-		.type = 0xbabe,
-		.data = { c },
-	};
-
-	c4_msg_send( &msg, display );
+	console_put_char( display, c );
 }
 
 static void puts( const char *s ){
@@ -284,6 +280,7 @@ void _start( unsigned long ndisplay ){
 	puts( "\n" );
 
 	pci_dump_devices( );
+
 	pci_device_t foo = pci_lookup( 0x10ec, 0x8139 );
 
 	if ( foo.valid ){

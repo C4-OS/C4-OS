@@ -13,6 +13,7 @@ enum {
 
 	CONSOLE_MSG_GET_INFO,
 
+	CONSOLE_MSG_INFO,
 	CONSOLE_MSG_ERROR,
 	CONSOLE_MSG_END,
 };
@@ -22,7 +23,6 @@ typedef struct console_info {
 	unsigned y_pos;
 	unsigned width;
 	unsigned height;
-	unsigned colors;
 } console_info_t;
 
 static inline void console_clear( unsigned id ){
@@ -58,11 +58,16 @@ static inline void console_set_color( unsigned id, unsigned color ){
 	c4_msg_send( &msg, id );
 }
 
-static inline void console_get_info( unsigned id ){
+static inline void console_get_info( unsigned id, console_info_t *info ){
 	message_t msg = { .type = CONSOLE_MSG_GET_INFO, };
 
 	c4_msg_send( &msg, id );
 	c4_msg_recieve( &msg, id );
+
+	info->x_pos  = msg.data[0];
+	info->y_pos  = msg.data[1];
+	info->width  = msg.data[2];
+	info->height = msg.data[3];
 }
 
 #endif

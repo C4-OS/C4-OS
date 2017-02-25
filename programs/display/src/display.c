@@ -54,6 +54,20 @@ static void do_clear( display_t *state ){
 	do_set_position( state, 0, 0 );
 }
 
+static void send_info( message_t *msg, display_t *state ){
+	message_t ret = {
+		.type = CONSOLE_MSG_INFO,
+		.data = {
+			state->x,
+			state->y,
+			state->width,
+			state->height,
+		},
+	};
+
+	c4_msg_send( &ret, msg->sender );
+}
+
 void _start( uintptr_t nameserver ){
 	message_t msg;
 	display_t state;
@@ -81,6 +95,10 @@ void _start( uintptr_t nameserver ){
 
 			case CONSOLE_MSG_CLEAR:
 				do_clear( &state );
+				break;
+
+			case CONSOLE_MSG_GET_INFO:
+				send_info( &msg, &state );
 				break;
 
 			default:

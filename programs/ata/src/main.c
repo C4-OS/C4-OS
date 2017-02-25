@@ -1,10 +1,10 @@
 #include <ata/ata.h>
-#include <ata/stubs.h>
 #include <c4rt/c4rt.h>
 #include <c4/arch/interrupts.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <nameserver/nameserver.h>
+#include <interfaces/block.h>
 
 static ide_control_t ide_drives;
 
@@ -51,7 +51,7 @@ void _start( uintptr_t nameserver ){
 		c4_msg_recieve( &msg, 0 );
 		c4_debug_printf( "--- ata: got request from %u\n", msg.sender );
 
-		if ( msg.type == ATA_MSG_READ || msg.type == ATA_MSG_WRITE ){
+		if ( msg.type == BLOCK_MSG_READ || msg.type == BLOCK_MSG_WRITE ){
 			ata_handle_access( &msg );
 		}
 	}
@@ -61,7 +61,7 @@ void _start( uintptr_t nameserver ){
 
 void ata_handle_access( message_t *request ){
 	message_t msg = {
-		.type = ATA_MSG_BUFFER,
+		.type = BLOCK_MSG_BUFFER,
 		.data = { 0xc0000000 },
 	};
 
@@ -70,7 +70,7 @@ void ata_handle_access( message_t *request ){
 	unsigned sectors     = request->data[2];
 
 	if ( !device->exists ){
-		msg = (message_t){ .type = ATA_MSG_ERROR };
+		msg = (message_t){ .type = BLOCK_MSG_ERROR };
 		c4_msg_send( &msg, request->sender );
 		return;
 	}
@@ -81,7 +81,7 @@ void ata_handle_access( message_t *request ){
 	C4_ASSERT( msg.type == MESSAGE_TYPE_MAP_TO );
 	C4_ASSERT( msg.data[0] == 0xc0000000 );
 
-	if ( request->type == ATA_MSG_READ ){
+	if ( request->type == BLOCK_MSG_READ ){
 		c4_debug_printf( "--- ata: reading %u sectors for %u at %x\n",
 				sectors, request->sender, location );
 
@@ -94,7 +94,7 @@ void ata_handle_access( message_t *request ){
 		ide_pio_write( device, (void *)0xc0000000, location, sectors );
 	}
 
-	msg = (message_t){ .type = ATA_MSG_COMPLETED, };
+	msg = (message_t){ .type = BLOCK_MSG_COMPLETED, };
 
 	c4_msg_send( &msg, request->sender );
 }

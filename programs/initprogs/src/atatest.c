@@ -1,7 +1,7 @@
 #include <c4rt/c4rt.h>
-#include <c4/paging.h>
-#include <ata/stubs.h>
 #include <nameserver/nameserver.h>
+#include <interfaces/block.h>
+#include <c4/paging.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -19,7 +19,7 @@ void _start( unsigned nameserver ){
 	c4_debug_printf( "--- atatest: have ata server at %u\n", ata );
 
 	c4_debug_printf( "--- atatest: reading sector 0...\n" );
-	bool had_error = ata_read( ata, buffer, 0, 0, 1024 );
+	bool had_error = block_read( ata, buffer, 0, 0, 1024 );
 
 	if ( had_error ){
 		c4_debug_printf( "--- atatest: had error while reading\n" );

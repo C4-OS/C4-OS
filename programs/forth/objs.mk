@@ -3,7 +3,7 @@ forth-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/miniforth.a \
 forth-src  = $(wildcard $(PROGRAM_ROOT)/forth/src/*.c)
 forth-obj  = $(forth-src:.c=.o)
 
-$(BUILD)/bin/forth: $(PROGRAM_ROOT)/forth/src/forth.o $(forth-libs)
+$(BUILD)/bin/forth: $(forth-obj) $(forth-libs)
 	@echo CC $^ -o $@
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(forth-libs)
 

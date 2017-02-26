@@ -172,6 +172,8 @@ void minift_put_char( char c ){
 	console_put_char( display, c );
 }
 
+void add_c4_archives( minift_vm_t *vm );
+
 void _start( uintptr_t nameserver ){
 	unsigned long data[512];
 	unsigned long calls[32];
@@ -206,6 +208,7 @@ void _start( uintptr_t nameserver ){
 	};
 
 	minift_init_vm( &foo, &call_stack, &data_stack, &param_stack, NULL );
+	add_c4_archives( &foo );
 	minift_run( &foo );
 
 	c4_exit();

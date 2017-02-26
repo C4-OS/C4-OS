@@ -173,6 +173,7 @@ void minift_put_char( char c ){
 }
 
 void add_c4_archives( minift_vm_t *vm );
+void init_c4_allocator( minift_vm_t *vm );
 
 void _start( uintptr_t nameserver ){
 	unsigned long data[512];
@@ -208,6 +209,7 @@ void _start( uintptr_t nameserver ){
 	};
 
 	minift_init_vm( &foo, &call_stack, &data_stack, &param_stack, NULL );
+	init_c4_allocator( &foo );
 	add_c4_archives( &foo );
 	minift_run( &foo );
 

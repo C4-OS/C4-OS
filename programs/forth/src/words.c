@@ -6,6 +6,7 @@
 #include <interfaces/block.h>
 #include <interfaces/console.h>
 #include <nameserver/nameserver.h>
+#include <c4alloc/c4alloc.h>
 
 static bool c4_minift_sendmsg( minift_vm_t *vm ){
 	unsigned long target = minift_pop( vm, &vm->param_stack );
@@ -140,6 +141,34 @@ static bool c4_minift_name_lookup( minift_vm_t *vm ){
 	return true;
 }
 
+static c4a_heap_t minift_heap;
+
+static bool c4_minift_allocate( minift_vm_t *vm ){
+	unsigned size = minift_pop( vm, &vm->param_stack );
+
+	if ( !vm->running ){
+		return false;
+	}
+
+	void *foo = c4a_alloc( &minift_heap, size );
+	minift_push( vm, &vm->param_stack, (uintptr_t)foo );
+
+	return true;
+}
+
+static bool c4_minift_free( minift_vm_t *vm ){
+	void *ptr = (void *)minift_pop( vm, &vm->param_stack );
+
+	if ( !vm->running ){
+		return false;
+	}
+
+	c4a_free( &minift_heap, ptr );
+	minift_push( vm, &vm->param_stack, 0 );
+
+	return true;
+}
+
 static minift_archive_entry_t c4_words[] = {
 	{ "sendmsg",  c4_minift_sendmsg, 0 },
 	{ "recvmsg",  c4_minift_recvmsg, 0 },
@@ -150,6 +179,10 @@ static minift_archive_entry_t c4_words[] = {
 	{ "clear",    c4_minift_console_clear, 0 },
 	{ "consinfo", c4_minift_console_info, 0 },
 	{ "lookup",   c4_minift_name_lookup, 0 },
+
+	{ "allocate", c4_minift_allocate },
+	{ "free",     c4_minift_free },
+	// TODO: implement 'resize' once realloc is implemented in c4alloc
 };
 
 static minift_archive_t c4_archive = {
@@ -160,4 +193,8 @@ static minift_archive_t c4_archive = {
 
 void add_c4_archives( minift_vm_t *vm ){
 	minift_archive_add( vm, &c4_archive );
+}
+
+void init_c4_allocator( minift_vm_t *vm ){
+	c4a_heap_init( &minift_heap, 0xd0000000 );
 }

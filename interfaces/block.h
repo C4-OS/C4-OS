@@ -54,7 +54,7 @@ static inline bool block_read( unsigned id,
 {
 	message_t msg = {
 		.type = BLOCK_MSG_READ,
-		.data = { drive, location, size / 512 },
+		.data = { drive, location, size },
 	};
 
 	return block_access( id, &msg, page );
@@ -68,7 +68,7 @@ static inline bool block_write( unsigned id,
 {
 	message_t msg = {
 		.type = BLOCK_MSG_WRITE,
-		.data = { drive, location, size / 512 },
+		.data = { drive, location, size },
 	};
 
 	return block_access( id, &msg, page );

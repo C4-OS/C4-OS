@@ -19,7 +19,7 @@ void _start( unsigned nameserver ){
 	c4_debug_printf( "--- atatest: have ata server at %u\n", ata );
 
 	c4_debug_printf( "--- atatest: reading sector 0...\n" );
-	bool had_error = block_read( ata, buffer, 0, 0, 1024 );
+	bool had_error = block_read( ata, buffer, 0, 0, 2 );
 
 	if ( had_error ){
 		c4_debug_printf( "--- atatest: had error while reading\n" );

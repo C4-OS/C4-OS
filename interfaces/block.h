@@ -25,14 +25,18 @@ static inline bool block_access( unsigned id,
                                  message_t *msg,
                                  void *page )
 {
+	bool error = BLOCK_MSG_NO_ERROR;
+
 	// send read request
 	c4_msg_send( msg, id );
 	// wait for the address where a read buffer should be mapped to
 	c4_msg_recieve( msg, id );
 	void *mapaddr = (void *)msg->data[0];
 
-	if ( msg->type != BLOCK_MSG_BUFFER )
-		return BLOCK_MSG_HAD_ERROR;
+	if ( msg->type != BLOCK_MSG_BUFFER ){
+		error = BLOCK_MSG_HAD_ERROR;
+		goto done;
+	}
 
 	// map the buffer to the given address
 	c4_mem_map_to( id, page, mapaddr, 1, PAGE_WRITE | PAGE_READ );
@@ -40,10 +44,11 @@ static inline bool block_access( unsigned id,
 	c4_msg_recieve( msg, id );
 	C4_ASSERT( msg->type == BLOCK_MSG_COMPLETED );
 
+done:
 	// finally unmap the buffer
 	c4_mem_unmap( id, mapaddr );
 
-	return BLOCK_MSG_NO_ERROR;
+	return error;
 }
 
 static inline bool block_read( unsigned id,

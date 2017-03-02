@@ -48,11 +48,17 @@ void _start( uintptr_t nameserver ){
 	while ( true ){
 		message_t msg;
 
+		c4_debug_printf( "--- ata: waiting for a message...\n" );
 		c4_msg_recieve( &msg, 0 );
-		c4_debug_printf( "--- ata: got request from %u\n", msg.sender );
 
 		if ( msg.type == BLOCK_MSG_READ || msg.type == BLOCK_MSG_WRITE ){
+			c4_debug_printf( "--- ata: got request from %u\n", msg.sender );
 			ata_handle_access( &msg );
+
+		} else {
+			c4_debug_printf(
+				"--- ata: unknown request %u from %u\n",
+				msg.type, msg.sender );
 		}
 	}
 
@@ -97,6 +103,8 @@ void ata_handle_access( message_t *request ){
 	msg = (message_t){ .type = BLOCK_MSG_COMPLETED, };
 
 	c4_msg_send( &msg, request->sender );
+	c4_msg_recieve( &msg, request->sender );
+	C4_ASSERT( msg.type == MESSAGE_TYPE_UNMAP );
 }
 
 static inline void interrupt_subscribe( unsigned intr ){

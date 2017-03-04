@@ -9,5 +9,6 @@ WEAK size_t strlen(const char *s);
 WEAK char *strcpy(char *dest, const char *src);
 WEAK char *strncpy(char *dest, const char *src, size_t n);
 WEAK size_t strlcpy(char *dest, const char *src, size_t size);
+WEAK int strcmp( const char *s1, const char *s2 );
 
 #endif

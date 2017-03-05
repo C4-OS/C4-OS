@@ -86,8 +86,8 @@ void framebuffer_init( display_t *state ){
 		for ( unsigned x = 0; x < c4_bootinfo->framebuffer.width; x++ ){
 			unsigned index = y * c4_bootinfo->framebuffer.width + x;
 
-			fb[index] = 0x202000 | x ^ y;
-			//fb[index] = GRAPHIC_BACKGROUND;
+			//fb[index] = 0x202000 | x ^ y;
+			fb[index] = GRAPHIC_BACKGROUND;
 		}
 	}
 }

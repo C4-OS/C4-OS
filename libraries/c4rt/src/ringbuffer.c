@@ -34,7 +34,7 @@ bool c4_ringbuf_can_write( c4_ringbuf_t *buf, size_t size ){
 }
 
 bool c4_ringbuf_can_read( c4_ringbuf_t *buf, size_t size ){
-	return size < buf->size - c4_ringbuf_available(buf);
+	return size <= buf->size - c4_ringbuf_available(buf);
 }
 
 bool c4_ringbuf_put_byte( c4_ringbuf_t *buf, uint8_t byte ){

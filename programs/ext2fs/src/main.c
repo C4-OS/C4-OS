@@ -20,63 +20,6 @@
 //      the code.
 static uint8_t disk_buffer[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
 
-static inline unsigned ext2_block_size( ext2fs_t *ext2 ){
-	return 1 << (ext2->superblock.base.block_size + 10);
-}
-
-static inline bool is_valid_ext2fs( ext2fs_t *ext2 ){
-	return ext2->superblock.base.signature == EXT2_SIGNATURE;
-}
-
-static inline unsigned ext2_block_to_sector( ext2fs_t *fs, unsigned block ){
-	return block * ext2_block_size(fs) / 512 + fs->block_device_start;
-}
-
-static inline unsigned ext2_block_size_to_sectors( ext2fs_t *ext2 ){
-	return ext2_block_size(ext2) / 512;
-}
-
-static inline unsigned ext2_total_block_descs( ext2fs_t *ext2 ){
-	unsigned n_descs  = ext2->superblock.base.total_blocks /
-	                    ext2->superblock.base.blocks_per_group;
-	/*
-	unsigned overflow = ext2->superblock.base.total_blocks %
-	                    ext2->superblock.base.blocks_per_group;
-
-	return n_descs + (overflow > 0);
-						*/
-
-	return n_descs;
-}
-
-static inline unsigned ext2_inodes_per_group( ext2fs_t *ext2 ){
-	return ext2->superblock.base.inodes_per_group;
-}
-
-static inline unsigned ext2_max_inode( ext2fs_t *ext2 ){
-	return ext2->superblock.base.total_inodes;
-}
-
-static inline unsigned ext2_max_block( ext2fs_t *ext2 ){
-	return ext2->superblock.base.total_blocks;
-}
-
-static inline unsigned ext2_inode_type( ext2_inode_t *inode ){
-	return (inode->modes & 0xf000) >> 12;
-}
-
-static inline unsigned ext2_block_group( ext2fs_t *ext2, unsigned inode ){
-	return (inode - 1) / ext2_inodes_per_group( ext2 );
-}
-
-static inline unsigned ext2_group_index( ext2fs_t *ext2, unsigned inode ){
-	return (inode - 1) % ext2_inodes_per_group( ext2 );
-}
-
-static inline unsigned ext2_inode_size( ext2fs_t *ext2 ){
-	return ext2->superblock.ext.inode_size;
-}
-
 ext2_superblock_t *ext2_get_superblock( unsigned device, unsigned drive ){
 	bool error = block_read( device, disk_buffer, drive, 2050, 2 );
 
@@ -249,6 +192,7 @@ void _start( uintptr_t nameserver ){
 		message_t msg;
 
 		c4_msg_recieve( &msg, 0 );
+		ext2_handle_request( &ext2, &msg );
 	}
 
 	c4_exit();

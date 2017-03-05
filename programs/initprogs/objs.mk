@@ -29,6 +29,10 @@ $(BUILD)/bin/atatest: $(PROGRAM_ROOT)/initprogs/src/atatest.o $(initprog-libs)
 	@echo CC $^ -o $@
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
 
+$(BUILD)/bin/fstest: $(PROGRAM_ROOT)/initprogs/src/fstest.o $(initprog-libs)
+	@echo CC $^ -o $@
+	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+
 
 .PHONY: initprogs-keyboard-clean
 initprogs-keyboard-clean:
@@ -65,6 +69,11 @@ initprogs-atatest-clean:
 	rm -f $(BUILD)/bin/atatest
 	rm -f $(PROGRAM_ROOT)/initprogs/src/atatest.o
 
+.PHONY: initprogs-fstest-clean
+initprogs-fstest-clean:
+	rm -f $(BUILD)/bin/fstest
+	rm -f $(PROGRAM_ROOT)/initprogs/src/fstest.o
+
 
 ALL_PROGRAMS += $(BUILD)/bin/keyboard
 ALL_PROGRAMS += $(BUILD)/bin/test
@@ -73,6 +82,7 @@ ALL_PROGRAMS += $(BUILD)/bin/faulter
 ALL_PROGRAMS += $(BUILD)/bin/ipcbench
 ALL_PROGRAMS += $(BUILD)/bin/alloctest
 ALL_PROGRAMS += $(BUILD)/bin/atatest
+ALL_PROGRAMS += $(BUILD)/bin/fstest
 ALL_CLEAN    += initprogs-keyboard-clean
 ALL_CLEAN    += initprogs-test-clean
 ALL_CLEAN    += initprogs-pci-clean
@@ -80,3 +90,4 @@ ALL_CLEAN    += initprogs-faulter-clean
 ALL_CLEAN    += initprogs-ipcbench-clean
 ALL_CLEAN    += initprogs-alloctest-clean
 ALL_CLEAN    += initprogs-atatest-clean
+ALL_CLEAN    += initprogs-fstest-clean

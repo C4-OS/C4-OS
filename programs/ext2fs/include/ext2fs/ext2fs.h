@@ -2,6 +2,8 @@
 #define _C4OS_EXT2FS_H 1
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+#include <c4/message.h>
 
 enum {
 	EXT2_SIGNATURE = 0xef53,
@@ -194,5 +196,63 @@ typedef struct ext2fs {
 
 	unsigned block_device;
 } ext2fs_t;
+
+void ext2_handle_request( ext2fs_t *fs, message_t *request );
+ext2_superblock_t *ext2_get_superblock( unsigned device, unsigned drive );
+void *ext2_read_block( ext2fs_t *fs, unsigned block );
+ext2_block_group_desc_t *ext2_get_block_descs( ext2fs_t *ext2 );
+ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
+							  ext2_inode_t *buffer,
+                              unsigned inode );
+void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block );
+
+static inline unsigned ext2_block_size( ext2fs_t *ext2 ){
+	return 1 << (ext2->superblock.base.block_size + 10);
+}
+
+static inline bool is_valid_ext2fs( ext2fs_t *ext2 ){
+	return ext2->superblock.base.signature == EXT2_SIGNATURE;
+}
+
+static inline unsigned ext2_block_to_sector( ext2fs_t *fs, unsigned block ){
+	return block * ext2_block_size(fs) / 512 + fs->block_device_start;
+}
+
+static inline unsigned ext2_block_size_to_sectors( ext2fs_t *ext2 ){
+	return ext2_block_size(ext2) / 512;
+}
+
+static inline unsigned ext2_total_block_descs( ext2fs_t *ext2 ){
+	return ext2->superblock.base.total_blocks /
+	       ext2->superblock.base.blocks_per_group;
+}
+
+static inline unsigned ext2_inodes_per_group( ext2fs_t *ext2 ){
+	return ext2->superblock.base.inodes_per_group;
+}
+
+static inline unsigned ext2_max_inode( ext2fs_t *ext2 ){
+	return ext2->superblock.base.total_inodes;
+}
+
+static inline unsigned ext2_max_block( ext2fs_t *ext2 ){
+	return ext2->superblock.base.total_blocks;
+}
+
+static inline unsigned ext2_inode_type( ext2_inode_t *inode ){
+	return (inode->modes & 0xf000) >> 12;
+}
+
+static inline unsigned ext2_block_group( ext2fs_t *ext2, unsigned inode ){
+	return (inode - 1) / ext2_inodes_per_group( ext2 );
+}
+
+static inline unsigned ext2_group_index( ext2fs_t *ext2, unsigned inode ){
+	return (inode - 1) % ext2_inodes_per_group( ext2 );
+}
+
+static inline unsigned ext2_inode_size( ext2fs_t *ext2 ){
+	return ext2->superblock.ext.inode_size;
+}
 
 #endif

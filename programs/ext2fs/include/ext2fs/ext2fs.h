@@ -255,4 +255,8 @@ static inline unsigned ext2_inode_size( ext2fs_t *ext2 ){
 	return ext2->superblock.ext.inode_size;
 }
 
+static inline bool ext2_is_directory( ext2_inode_t *inode ){
+	return ext2_inode_type(inode) == EXT2_INODE_TYPE_DIRECTORY;
+}
+
 #endif

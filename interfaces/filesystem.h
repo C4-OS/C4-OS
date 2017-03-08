@@ -11,10 +11,10 @@ enum {
 	FS_MSG_PONG,
 
 	FS_MSG_BUFFER,
-	// TODO: implement these, FS_MSG_BUFFER will work for now
 	FS_MSG_CONNECT,
 	FS_MSG_DISCONNECT,
 
+	FS_MSG_FIND_NAME,
 	FS_MSG_GET_ROOT_DIR,
 	FS_MSG_LIST_DIR,
 	FS_MSG_SET_NODE,
@@ -32,7 +32,9 @@ enum {
 	FS_ERROR_NONE,
 	FS_ERROR_NOT_DIRECTORY,
 	FS_ERROR_NOT_CONNECTED,
+	FS_ERROR_NOT_FOUND,
 	FS_ERROR_SERVER_BUSY,
+	FS_ERROR_BAD_REQUEST,
 };
 
 enum {
@@ -126,6 +128,39 @@ static inline void fs_disconnect( fs_connection_t *conn ){
 	conn->buffer = NULL;
 }
 
+static inline int fs_find_name( fs_connection_t *conn,
+                                fs_node_t *nodebuf,
+                                char *name,
+                                size_t namelen )
+{
+	if ( conn->state != FS_STATE_CONNECTED ){
+		return -FS_ERROR_NOT_CONNECTED;
+	}
+
+	if ( !c4_ringbuf_can_write( conn->buffer, namelen )){
+		return -FS_ERROR_SERVER_BUSY;
+	}
+
+	message_t msg = {
+		.type = FS_MSG_FIND_NAME,
+		.data = { namelen },
+	};
+
+	c4_ringbuf_write( conn->buffer, name, namelen );
+	c4_msg_send( &msg, conn->server );
+	c4_msg_recieve( &msg, conn->server );
+
+	if ( msg.type == FS_MSG_ERROR ){
+		return -msg.data[0];
+	}
+
+	nodebuf->inode = msg.data[0];
+	nodebuf->type  = msg.data[1];
+	nodebuf->size  = msg.data[2];
+
+	return 1;
+}
+
 static inline int fs_get_root_dir( unsigned id, fs_node_t *node ){
 	message_t msg = { .type = FS_MSG_GET_ROOT_DIR, };
 
@@ -138,7 +173,7 @@ static inline int fs_get_root_dir( unsigned id, fs_node_t *node ){
 	node->type  = msg.data[1];
 	node->size  = msg.data[2];
 
-	return 0;
+	return 1;
 }
 
 static inline void fs_set_node( fs_connection_t *conn, fs_node_t *node ){

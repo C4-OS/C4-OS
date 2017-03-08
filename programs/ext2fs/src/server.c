@@ -1,6 +1,8 @@
 #include <ext2fs/ext2fs.h>
 #include <interfaces/filesystem.h>
 #include <c4rt/ringbuffer.h>
+#include <c4rt/stublibc.h>
+#include <stdbool.h>
 
 // TODO: move these into per-thread datastructures once worker threads are
 //       implemented
@@ -11,6 +13,7 @@ static void handle_connect( ext2fs_t *fs, message_t *request );
 static void handle_disconnect( ext2fs_t *fs, message_t *request );
 static void handle_set_node( ext2fs_t *fs, message_t *request );
 static void handle_list_dir( ext2fs_t *fs, message_t *request );
+static void handle_find_name( ext2fs_t *fs, message_t *request );
 static void handle_get_rootdir( ext2fs_t *fs, message_t *request );
 
 void ext2_handle_request( ext2fs_t *fs, message_t *request ){
@@ -18,6 +21,7 @@ void ext2_handle_request( ext2fs_t *fs, message_t *request ){
 		case FS_MSG_CONNECT:      handle_connect( fs, request );     break;
 		case FS_MSG_DISCONNECT:   handle_disconnect( fs, request );  break;
 		case FS_MSG_SET_NODE:     handle_set_node( fs, request );    break;
+		case FS_MSG_FIND_NAME:    handle_find_name( fs, request );   break;
 		case FS_MSG_GET_ROOT_DIR: handle_get_rootdir( fs, request ); break;
 		case FS_MSG_LIST_DIR:     handle_list_dir( fs, request );    break;
 		default: break;
@@ -31,6 +35,11 @@ static inline void send_error( message_t *request, unsigned error ){
 	};
 
 	c4_msg_send( &msg, request->sender );
+}
+
+static inline bool is_connected( message_t *request ){
+	return connection.state == FS_STATE_CONNECTED
+	    && connection.client == request->sender;
 }
 
 static inline void copy_name( fs_dirent_t *fs_ent, ext2_dirent_t *ext_ent ){
@@ -107,6 +116,73 @@ static void handle_set_node( ext2fs_t *fs, message_t *request ){
 	c4_msg_send( &msg, request->sender );
 }
 
+static inline bool name_matches( ext2_dirent_t *dir, char *name, size_t len ){
+	if ( dir->name_length != len ){
+		return false;
+	}
+
+	for ( size_t i = 0; i < len; i++ ){
+		if ( name[i] != dir->name[i] )
+			return false;
+	}
+
+	return true;
+}
+
+static void handle_find_name( ext2fs_t *fs, message_t *request ){
+	char name[FS_MAX_NAME_LEN];
+	size_t namelen = request->data[0];
+
+	// request validation
+	if ( !is_connected( request )){
+		send_error( request, FS_ERROR_NOT_CONNECTED );
+		return;
+	}
+
+	if ( !ext2_is_directory( &current_inode )){
+		send_error( request, FS_ERROR_NOT_DIRECTORY );
+		return;
+	}
+
+	if ( !c4_ringbuf_can_read( connection.buffer, namelen )
+	  || namelen >= FS_MAX_NAME_LEN )
+	{
+		send_error( request, FS_ERROR_BAD_REQUEST );
+		return;
+	}
+
+	c4_ringbuf_read( connection.buffer, name, namelen );
+
+	for ( size_t block = 0;
+	      block * ext2_block_size(fs) < current_inode.lower_size;
+	      block++ )
+	{
+		uint8_t *dirbuf = ext2_inode_read_block( fs, &current_inode, block );
+		ext2_dirent_t *dirent = (void *)dirbuf;
+
+		for ( unsigned i = 0; i < ext2_block_size(fs); ){
+			if ( name_matches( dirent, name, namelen )){
+				message_t msg = {
+					.type = FS_MSG_COMPLETED,
+					.data = {
+						dirent->inode,
+						translate_type(dirent->type),
+						0,
+					}
+				};
+
+				c4_msg_send( &msg, request->sender );
+				return;
+			}
+
+			i += dirent->size;
+			dirent = (void *)(dirbuf + i);
+		}
+	}
+
+	send_error( request, FS_ERROR_NOT_FOUND );
+}
+
 static void handle_get_rootdir( ext2fs_t *fs, message_t *request ){
 	ext2_inode_t inode;
 
@@ -128,7 +204,7 @@ static void handle_list_dir( ext2fs_t *fs, message_t *request ){
 	message_t msg;
 	unsigned sent = 0;
 
-	if ( connection.client != request->sender ){
+	if ( !is_connected( request )){
 		c4_debug_printf( "--- ext2: got error\n" );
 		send_error( request, FS_ERROR_NOT_CONNECTED );
 		return;

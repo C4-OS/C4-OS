@@ -34,6 +34,7 @@ enum {
 	FS_ERROR_NOT_CONNECTED,
 	FS_ERROR_NOT_FOUND,
 	FS_ERROR_SERVER_BUSY,
+	FS_ERROR_QUEUE_FULL,
 	FS_ERROR_BAD_REQUEST,
 };
 
@@ -208,6 +209,30 @@ static inline int fs_next_dirent( fs_connection_t *conn, fs_dirent_t *dirent ){
 	c4_ringbuf_read( conn->buffer, dirent, sizeof( fs_dirent_t ));
 
 	return 1;
+}
+
+static inline int fs_read_block( fs_connection_t *conn,
+                                 void *buffer,
+                                 size_t maxlen )
+{
+	if ( c4_ringbuf_empty( conn->buffer )){
+		message_t msg = {
+			.type = FS_MSG_READ_BLOCK,
+			.data = { 0, },
+		};
+
+		c4_msg_send( &msg, conn->server );
+		c4_msg_recieve( &msg, conn->server );
+
+		if ( msg.type == FS_MSG_ERROR ){
+			c4_debug_printf( "--- error: %u\n", msg.data[0] );
+			return -msg.data[0];
+		}
+
+		msg.type = MESSAGE_TYPE_DUMP_MAPS;
+	}
+
+	return c4_ringbuf_read( conn->buffer, buffer, maxlen );
 }
 
 #endif

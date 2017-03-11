@@ -15,6 +15,7 @@ static void handle_set_node( ext2fs_t *fs, message_t *request );
 static void handle_list_dir( ext2fs_t *fs, message_t *request );
 static void handle_find_name( ext2fs_t *fs, message_t *request );
 static void handle_get_rootdir( ext2fs_t *fs, message_t *request );
+static void handle_read_block( ext2fs_t *fs, message_t *request );
 
 void ext2_handle_request( ext2fs_t *fs, message_t *request ){
 	switch ( request->type ){
@@ -24,6 +25,7 @@ void ext2_handle_request( ext2fs_t *fs, message_t *request ){
 		case FS_MSG_FIND_NAME:    handle_find_name( fs, request );   break;
 		case FS_MSG_GET_ROOT_DIR: handle_get_rootdir( fs, request ); break;
 		case FS_MSG_LIST_DIR:     handle_list_dir( fs, request );    break;
+		case FS_MSG_READ_BLOCK:   handle_read_block( fs, request );  break;
 		default: break;
 	}
 }
@@ -109,6 +111,8 @@ static void handle_set_node( ext2fs_t *fs, message_t *request ){
 		.type  = FILE_TYPE_UNKNOWN,
 		.size  = 0,
 	};
+
+	connection.index = 0;
 
 	ext2_get_inode( fs, &current_inode, request->data[0] );
 
@@ -239,5 +243,44 @@ static void handle_list_dir( ext2fs_t *fs, message_t *request ){
 done:
 	msg.type    = FS_MSG_COMPLETED;
 	msg.data[0] = sent;
+	c4_msg_send( &msg, request->sender );
+}
+
+static void handle_read_block( ext2fs_t *fs, message_t *request ){
+	size_t sent = 0;
+
+	if ( !is_connected( request )){
+		send_error( request, FS_ERROR_NOT_CONNECTED );
+		return;
+	}
+
+	if ( connection.index >= current_inode.lower_size ){
+		goto done;
+	}
+
+	size_t blocksize = ext2_block_size(fs);
+	size_t size      = current_inode.lower_size;
+	size_t index     = connection.index;
+	size_t diff      = size - index;
+	size_t writesize = (diff > blocksize)? blocksize : diff;
+
+	if ( !c4_ringbuf_can_write( connection.buffer, writesize )){
+		send_error( request, FS_ERROR_QUEUE_FULL );
+		return;
+	}
+
+	unsigned block = connection.index / blocksize;
+	void *foo = ext2_inode_read_block( fs, &current_inode, block );
+	size_t wrote = c4_ringbuf_write( connection.buffer, foo, writesize );
+
+	sent += writesize;
+	connection.index += writesize;
+
+done: ;
+	message_t msg = {
+		.type = FS_MSG_COMPLETED,
+		.data = { sent },
+	};
+
 	c4_msg_send( &msg, request->sender );
 }

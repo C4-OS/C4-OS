@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 static uint8_t buffer[PAGE_SIZE] ALIGN_TO(PAGE_SIZE);
+static uint8_t otherbuf[PAGE_SIZE] ALIGN_TO(PAGE_SIZE);
 static char *types[] = { "unknown", "file", "directory", "symlink", };
 
 void _start( unsigned nameserver ){
@@ -47,9 +48,24 @@ void _start( unsigned nameserver ){
 
 	foo.inode = 0;
 
-	if ( fs_find_name( &conn, &foo, fooname, strlen(fooname) )){
+	if ( fs_find_name(&conn, &foo, fooname, strlen(fooname)) > 0 ){
 		c4_debug_printf( "--- fstest: found %s, inode: %u\n",
 			fooname, foo.inode );
+
+		fs_set_node( &conn, &node );
+		int n = fs_read_block( &conn, otherbuf, PAGE_SIZE );
+
+		c4_debug_printf( "--- fstest: read %u characters\n", n );
+
+		for ( unsigned i = 0; i < n; i++ ){
+			//c4_debug_putchar( otherbuf[n] );
+			c4_debug_printf( "%x ", otherbuf[i] );
+		}
+
+		c4_debug_putchar( '\n' );
+
+	} else {
+		c4_debug_printf( "--- fstest: did not find %s\n", fooname );
 	}
 
 	fs_disconnect( &conn );

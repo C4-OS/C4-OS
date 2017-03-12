@@ -61,16 +61,25 @@ ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
 	}
 
 	unsigned group = ext2_block_group( ext2, inode );
-	unsigned index = ext2_group_index( ext2, inode );
 	unsigned table = descs[group].inode_table;
+	unsigned group_index = ext2_group_index( ext2, inode );
 
-	DEBUGF( "looking for inode %u at %u[%u] (%u)\n",
-		inode, table, index, ext2_block_to_sector( ext2, table ));
+	unsigned offset = group_index / ext2_inodes_per_block( ext2 );
+	unsigned index  = group_index % ext2_inodes_per_block( ext2 );
 
-	uint8_t *inode_table = ext2_read_block( ext2, table );
-	unsigned table_index = index % (ext2_block_size(ext2) / ext2_inode_size(ext2));
+	DEBUGF( "looking for inode %u at %u[%u] (offset %u[%u]) @ %u\n",
+		inode, table, group_index,
+		offset, index,
+		ext2_block_to_sector( ext2, table ));
 
-	ext2_inode_t *inode_ptr = (void *)(inode_table + table_index * ext2_inode_size(ext2));
+	uint8_t *inode_table = ext2_read_block( ext2, table + offset );
+
+	if ( !inode_table ){
+		DEBUGF( "inode table not in filesystem, %u\n", inode );
+		return NULL;
+	}
+
+	ext2_inode_t *inode_ptr = (void *)(inode_table + index * ext2_inode_size(ext2));
 
 	*buffer = *inode_ptr;
 
@@ -183,6 +192,9 @@ void _start( uintptr_t nameserver ){
 		DEBUGF( "  dirent size:  %u\n", foo->size );
 		DEBUGF( "  dirent name length: %u\n", foo->name_length );
 		DEBUGF( "  dirent type: %u\n", foo->type );
+
+		C4_ASSERT( foo->size != 0 );
+		if ( foo->size == 0 ) break;
 
 		i += foo->size;
 		foo = (void *)(dirents + i);

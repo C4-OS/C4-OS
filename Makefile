@@ -1,10 +1,10 @@
+ALL_PROGRAMS  =
+ALL_LIBRARIES =
+
 include buildconf.mk
 
 .PHONY: do_all
 do_all: all
-
-ALL_PROGRAMS  = 
-ALL_LIBRARIES = 
 
 # include recipes provided by each program
 -include $(wildcard $(PROGRAM_ROOT)/*/objs.mk)
@@ -31,8 +31,12 @@ $(BUILD)/c4-$(ARCH): $(BUILD)
 		make CROSS=$(CROSS) ARCH=$(ARCH); \
 		cp c4-$(ARCH) $@
 
-$(BUILD)/initfs.tar: $(BUILD) $(ALL_PROGRAMS)
-	cd $(BUILD); tar c ./bin > $@
+$(BUILD)/initfs: $(BUILD) $(INITFS_PROGRAMS)
+	mkdir -p $(BUILD)/initfs/bin
+	cp $(INITFS_PROGRAMS) $(BUILD)/initfs/bin
+
+$(BUILD)/initfs.tar: $(BUILD)/initfs
+	cd $(BUILD)/initfs; tar c ./bin > $@
 
 .PHONY: kernel
 kernel: $(BUILD)/c4-$(ARCH)

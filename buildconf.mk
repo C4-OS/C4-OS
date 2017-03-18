@@ -22,3 +22,11 @@ C4_CFLAGS = -Wall -g -O2 -ffreestanding -nostdlib -nodefaultlibs \
 %.o: %.c
 	@echo CC $< -c -o $@
 	@$(C4_CC) $(C4_CFLAGS) $< -c -o $@
+
+INITFS_PROGRAMS  = $(BUILD)/bin/nameserver
+INITFS_PROGRAMS += $(BUILD)/bin/ata
+INITFS_PROGRAMS += $(BUILD)/bin/ext2fs
+
+INITSYS_PROGRAMS += $(BUILD)/bin/keyboard
+INITSYS_PROGRAMS += $(BUILD)/bin/display
+INITSYS_PROGRAMS += $(BUILD)/bin/forth

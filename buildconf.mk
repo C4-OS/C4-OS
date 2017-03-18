@@ -4,6 +4,7 @@ BUILD        = $(PWD)/.buildtmp
 KERNEL_ROOT  = $(PWD)/kernel
 PROGRAM_ROOT = $(PWD)/programs
 LIBRARY_ROOT = $(PWD)/libraries
+TOOL_ROOT    = $(PWD)/tools
 
 KERNEL_INCLUDE    = -I$(KERNEL_ROOT)/include/ \
                     -I$(KERNEL_ROOT)/arch/$(ARCH)/include/

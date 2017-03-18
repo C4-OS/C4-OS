@@ -1,0 +1,52 @@
+insmod vbe
+insmod vga
+insmod video_cirrus
+set root='(hd0,msdos1)'
+set default="2"
+
+if loadfont unicode; then
+	insmod gfxterm
+	terminal_output gfxterm
+fi
+
+menuentry 'C4 OS - 320x200 framebuffer' {
+	multiboot /boot/c4-x86
+	set gfxpayload=320x200x32
+	module /boot/c4-x86-sigma0
+	boot
+}
+
+menuentry 'C4 OS - 640x400 framebuffer' {
+	multiboot /boot/c4-x86
+	set gfxpayload=640x400x32
+	module /boot/c4-x86-sigma0
+	boot
+}
+
+menuentry 'C4 OS - 800x600 framebuffer' {
+	multiboot /boot/c4-x86
+	set gfxpayload=800x600x32
+	module /boot/c4-x86-sigma0
+	boot
+}
+
+menuentry 'C4 OS - 1024x768 framebuffer' {
+	multiboot /boot/c4-x86
+	set gfxpayload=1024x768x32
+	module /boot/c4-x86-sigma0
+	boot
+}
+
+menuentry 'C4 OS - FULL HD 1280x768 framebuffer' {
+	multiboot /boot/c4-x86
+	set gfxpayload=1280x768x32
+	module /boot/c4-x86-sigma0
+	boot
+}
+
+menuentry 'C4 OS - 80x25 text mode' {
+	multiboot /boot/c4-x86 textmode
+	set gfxpayload=text
+	module /boot/c4-x86-sigma0
+	boot
+}

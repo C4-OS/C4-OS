@@ -38,6 +38,13 @@ $(BUILD)/initfs: $(BUILD) $(INITFS_PROGRAMS)
 $(BUILD)/initfs.tar: $(BUILD)/initfs
 	cd $(BUILD)/initfs; tar c ./bin > $@
 
+$(BUILD)/test.img: kernel sigma0 $(INITSYS_PROGRAMS)
+	sudo $(TOOL_ROOT)/buildimg-$(ARCH) $@ \
+		$(TOOL_ROOT)/bootconf-$(ARCH) \
+		$(BUILD)/c4-$(ARCH) \
+		$(BUILD)/c4-$(ARCH)-sigma0 \
+		$(INITSYS_PROGRAMS)
+
 .PHONY: kernel
 kernel: $(BUILD)/c4-$(ARCH)
 
@@ -54,8 +61,12 @@ clean: $(ALL_CLEAN)
 	rm -rf $(BUILD)
 
 .PHONY: test
-test:
+test: image
 	qemu-system-i386 \
+		-hda $(BUILD)/test.img \
 		-kernel $(BUILD)/c4-$(ARCH) \
 		-initrd $(BUILD)/c4-$(ARCH)-sigma0 \
 		-serial stdio -m 32 -s
+
+.PHONY: image
+image: $(BUILD)/test.img

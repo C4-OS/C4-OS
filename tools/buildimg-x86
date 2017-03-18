@@ -1,0 +1,107 @@
+#!/bin/sh
+
+if [ `id -u` -ne 0 ]; then
+	echo "This script needs to run as root, exiting..."
+	exit 1
+fi
+
+if [ $# -lt 5 ]; then
+	echo "usage: ./buildimg [output image] [bootload config]" \
+	     "[kernel] [sigma0] [init programs ...]"
+	exit 1
+fi
+
+IMAGE="$1";    shift
+BOOTCONF="$1"; shift
+KERNEL="$1";   shift
+SIGMA0="$1";   shift
+EXISTS=`test -e $IMAGE; echo $?`
+
+copy_files () {
+	mkdir -p temp_mount/sbin
+	mkdir -p temp_mount/boot
+	cp $@ temp_mount/sbin
+}
+
+linux_init_image () {
+	if [ $EXISTS = 1 ]; then
+		echo -e "n\np\n\n2048\n+16M\na\nw\nq\n" | fdisk $IMAGE > /dev/null
+	fi
+
+	losetup -o$(( 2048 * 512 )) /dev/loop0 $IMAGE
+
+	if [ $EXISTS = 1 ]; then
+		mkfs.ext2 /dev/loop0 > /dev/null
+	fi
+
+	mount -t ext2 /dev/loop0 temp_mount
+	mkdir -p temp_mount/boot/grub
+
+	cp "$KERNEL"   temp_mount/boot
+	cp "$SIGMA0"   temp_mount/boot
+	cp "$BOOTCONF" temp_mount/boot/grub
+}
+
+linux_unmount_image () {
+	sync
+
+	if [ $EXISTS = 1 ]; then
+		losetup /dev/loop1 $IMAGE
+		grub-install --root-directory=$PWD/temp_mount/boot \
+			--boot-directory=$PWD/temp_mount/boot \
+		    --no-floppy \
+			--modules="normal part_msdos ext2 multiboot vbe vga video_cirrus" \
+			/dev/loop1
+
+		sync
+		losetup -d /dev/loop1
+	fi
+
+	umount temp_mount
+	losetup -d /dev/loop0
+}
+
+freebsd_init_image () {
+	echo "image generation on FreeBSD isn't supported at the moment" \
+		"(but should be coming soon)."
+
+	#echo "Generating on freebsd..."
+
+	#mdconfig -a -t vnode -f $IMAGE -u 1
+	#mount -t msdosfs /dev/msdosfs/NO_NAME temp_mount
+
+	#copy_stuff
+
+	#umount temp_mount
+	#mdconfig -d -u 1
+}
+
+freebsd_unmount_image () {
+	echo
+}
+
+# main program entry point
+if [ $EXISTS = 1 ]; then
+	dd if=/dev/zero of=$IMAGE bs=1M count=18 > /dev/null
+	chmod uga+rw $IMAGE
+fi
+
+mkdir temp_mount
+
+case `uname` in  
+	"Linux")
+		linux_init_image
+		copy_files $@
+		linux_unmount_image
+		;;
+
+	#"FreeBSD")
+	#	freebsd_make_image ;;
+
+	*)
+		echo "image generation on `uname` is not supported at the moment."
+		exit 1
+		;;
+esac
+
+rmdir temp_mount

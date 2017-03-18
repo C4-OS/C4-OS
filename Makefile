@@ -66,7 +66,7 @@ test: image
 		-hda $(BUILD)/test.img \
 		-kernel $(BUILD)/c4-$(ARCH) \
 		-initrd $(BUILD)/c4-$(ARCH)-sigma0 \
-		-serial stdio -m 32 -s
+		-serial stdio -m 32 -s -enable-kvm
 
 .PHONY: image
 image: $(BUILD)/test.img

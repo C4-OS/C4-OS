@@ -16,6 +16,7 @@ enum {
 
 	FS_MSG_FIND_NAME,
 	FS_MSG_GET_ROOT_DIR,
+	FS_MSG_GET_NODE_INFO,
 	FS_MSG_LIST_DIR,
 	FS_MSG_SET_NODE,
 	FS_MSG_CREATE_NODE,
@@ -67,7 +68,7 @@ typedef struct fs_node {
 typedef struct fs_dirent {
 	char   name[FS_MAX_NAME_LEN];
 	size_t name_len;
-	unsigned inode;
+	unsigned long inode;
 	unsigned type;
 } fs_dirent_t;
 
@@ -83,10 +84,33 @@ typedef struct fs_connection {
 	};
 } fs_connection_t;
 
-static inline void fs_dirent_to_node( fs_dirent_t *dirent, fs_node_t *node ){
-	node->inode = dirent->inode;
-	node->type  = dirent->type;
-	node->size  = 0;
+static inline int fs_get_node_info( unsigned id,
+                                    unsigned long inode,
+                                    fs_node_t *node )
+{
+	message_t msg = {
+		.type = FS_MSG_GET_NODE_INFO,
+		.data = { inode, },
+	};
+
+	c4_msg_send( &msg, id );
+	c4_msg_recieve( &msg, id );
+
+	if ( msg.type == FS_MSG_ERROR )
+		return -msg.data[0];
+
+	node->inode = inode;
+	node->size  = msg.data[0];
+	node->type  = msg.data[1];
+
+	return 0;
+}
+
+static inline int fs_dirent_to_node( unsigned id,
+                                     fs_dirent_t *dirent,
+                                     fs_node_t *node )
+{
+	return fs_get_node_info( id, dirent->inode, node );
 }
 
 static inline int fs_connect( unsigned id, void *page, fs_connection_t *conn ){

@@ -27,6 +27,7 @@ C4_CFLAGS = -Wall -g -O2 -ffreestanding -nostdlib -nodefaultlibs \
 INITFS_PROGRAMS  = $(BUILD)/bin/nameserver
 INITFS_PROGRAMS += $(BUILD)/bin/ata
 INITFS_PROGRAMS += $(BUILD)/bin/ext2fs
+INITFS_PROGRAMS += $(BUILD)/bin/initsys
 
 INITSYS_PROGRAMS += $(BUILD)/bin/keyboard
 INITSYS_PROGRAMS += $(BUILD)/bin/display

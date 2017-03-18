@@ -100,6 +100,10 @@ void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
 
 void _start( uintptr_t nameserver ){
 	unsigned disk = 0;
+
+	// TODO: find another way to handle this, this limits the number of
+	//       ext2 filesystems to one per nameserver
+	nameserver_bind( nameserver, "/dev/ext2fs" );
 	
 	while ( !disk ){
 		disk = nameserver_lookup( nameserver, "/dev/ata" );

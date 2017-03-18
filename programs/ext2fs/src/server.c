@@ -15,17 +15,19 @@ static void handle_set_node( ext2fs_t *fs, message_t *request );
 static void handle_list_dir( ext2fs_t *fs, message_t *request );
 static void handle_find_name( ext2fs_t *fs, message_t *request );
 static void handle_get_rootdir( ext2fs_t *fs, message_t *request );
+static void handle_get_node_info( ext2fs_t *fs, message_t *request );
 static void handle_read_block( ext2fs_t *fs, message_t *request );
 
 void ext2_handle_request( ext2fs_t *fs, message_t *request ){
 	switch ( request->type ){
-		case FS_MSG_CONNECT:      handle_connect( fs, request );     break;
-		case FS_MSG_DISCONNECT:   handle_disconnect( fs, request );  break;
-		case FS_MSG_SET_NODE:     handle_set_node( fs, request );    break;
-		case FS_MSG_FIND_NAME:    handle_find_name( fs, request );   break;
-		case FS_MSG_GET_ROOT_DIR: handle_get_rootdir( fs, request ); break;
-		case FS_MSG_LIST_DIR:     handle_list_dir( fs, request );    break;
-		case FS_MSG_READ_BLOCK:   handle_read_block( fs, request );  break;
+		case FS_MSG_CONNECT:       handle_connect( fs, request );       break;
+		case FS_MSG_DISCONNECT:    handle_disconnect( fs, request );    break;
+		case FS_MSG_SET_NODE:      handle_set_node( fs, request );      break;
+		case FS_MSG_FIND_NAME:     handle_find_name( fs, request );     break;
+		case FS_MSG_GET_ROOT_DIR:  handle_get_rootdir( fs, request );   break;
+		case FS_MSG_GET_NODE_INFO: handle_get_node_info( fs, request ); break;
+		case FS_MSG_LIST_DIR:      handle_list_dir( fs, request );      break;
+		case FS_MSG_READ_BLOCK:    handle_read_block( fs, request );    break;
 		default: break;
 	}
 }
@@ -199,6 +201,25 @@ static void handle_get_rootdir( ext2fs_t *fs, message_t *request ){
 			FILE_TYPE_DIRECTORY,
 			inode.lower_size,
 		}
+	};
+
+	c4_msg_send( &msg, request->sender );
+}
+
+static void handle_get_node_info( ext2fs_t *fs, message_t *request ){
+	ext2_inode_t inode;
+
+	if ( ! ext2_get_inode( fs, &inode, request->data[0] )){
+		send_error( request, FS_ERROR_NOT_FOUND );
+		return;
+	}
+
+	message_t msg = {
+		.type = FS_MSG_COMPLETED,
+		.data = {
+			inode.lower_size,
+			translate_type( ext2_inode_type( &inode )),
+		},
 	};
 
 	c4_msg_send( &msg, request->sender );

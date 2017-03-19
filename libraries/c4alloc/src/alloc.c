@@ -1,4 +1,5 @@
 #include <c4alloc/c4alloc.h>
+#include <interfaces/pager.h>
 #include <c4rt/c4rt.h>
 #include <c4/paging.h>
 #include <stdint.h>
@@ -71,7 +72,7 @@ static inline void c4a_grow( c4a_heap_t *heap, unsigned pages ){
 	for ( ; temp < end; temp += PAGE_SIZE ){
 		c4a_node_t *node = (void *)temp;
 
-		c4_request_page( c4_get_pager(), temp, PAGE_READ | PAGE_WRITE );
+		pager_request_pages( c4_get_pager(), temp, PAGE_READ | PAGE_WRITE, 1 );
 
 		node->status = C4A_STATUS_FREE;
 		node->bucket = index;

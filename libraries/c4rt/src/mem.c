@@ -20,24 +20,10 @@ void *c4_request_physical( uintptr_t virt,
 	return (void *)virt;
 }
 
-void *c4_request_page( unsigned pager, uintptr_t virt, unsigned permissions ){
-	message_t msg = {
-		.type = 0xbeef10af,
-		.data = { virt, permissions, },
-	};
-
-	c4_msg_send( &msg, pager );
-	// wait for response from pager
-	// TODO: check for errors/denied request and error out somehow
-	c4_msg_recieve( &msg, pager );
-
-	return (void *)virt;
-}
-
 int c4_mem_unmap( unsigned thread_id, void *addr ){
 	message_t msg = {
 		.type = MESSAGE_TYPE_UNMAP,
-		.data = (uintptr_t)addr,
+		.data = { (uintptr_t)addr, },
 	};
 
 	return c4_msg_send( &msg, thread_id );

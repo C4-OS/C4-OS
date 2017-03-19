@@ -37,7 +37,6 @@ void *c4_request_physical( uintptr_t virt,
                            unsigned size,
                            unsigned permissions );
 
-void *c4_request_page( unsigned pager, uintptr_t virt, unsigned permissions );
 void  c4_dump_maps( unsigned thread );
 
 uint8_t  c4_in_byte( unsigned port );

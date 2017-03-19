@@ -5,7 +5,7 @@
 enum {
 	// maximum allocation size will be limited by the number of buckets,
 	// since each index will be log2(size) of the blocks it stores
-	C4A_MAX_BUCKETS = 12,
+	C4A_MAX_BUCKETS = 14,
 };
 
 enum {

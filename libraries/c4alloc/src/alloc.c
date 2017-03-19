@@ -62,17 +62,19 @@ static inline c4a_node_t *c4a_bucket_pop( c4a_heap_t *heap, unsigned index ){
 	return ret;
 }
 
-static inline void c4a_grow( c4a_heap_t *heap, unsigned pages ){
-	uintptr_t temp = heap->start + heap->pages * PAGE_SIZE;
-	uintptr_t end  = heap->start + (heap->pages + pages) * PAGE_SIZE;
-	unsigned index = ulog2( PAGE_SIZE );
+static inline void c4a_grow( c4a_heap_t *heap ){
+	unsigned  pages = (1 << C4A_MAX_BUCKETS) / PAGE_SIZE;
+	uintptr_t temp  = heap->start + heap->pages * PAGE_SIZE;
+	uintptr_t end   = heap->start + (heap->pages + pages) * PAGE_SIZE;
+	unsigned  index = C4A_MAX_BUCKETS;
 
 	heap->pages += pages;
 
-	for ( ; temp < end; temp += PAGE_SIZE ){
+	for ( ; temp < end; temp += pages * PAGE_SIZE ){
 		c4a_node_t *node = (void *)temp;
 
-		pager_request_pages( c4_get_pager(), temp, PAGE_READ | PAGE_WRITE, 1 );
+		pager_request_pages( c4_get_pager(), temp,
+		                     PAGE_READ | PAGE_WRITE, pages );
 
 		node->status = C4A_STATUS_FREE;
 		node->bucket = index;
@@ -92,9 +94,9 @@ static inline unsigned c4a_find_upwards_bucket( c4a_heap_t *heap,
 
 	// no free nodes found in the buckets, try to allocate another page
 	// and return that if it succeeds
-	c4a_grow( heap, 1 );
+	c4a_grow( heap );
 
-	return ulog2( PAGE_SIZE );
+	return C4A_MAX_BUCKETS;
 }
 
 static inline c4a_node_t *c4a_split_node( c4a_node_t *node ){

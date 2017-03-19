@@ -39,7 +39,7 @@ linux_init_image () {
 
 	cp "$KERNEL"   temp_mount/boot
 	cp "$SIGMA0"   temp_mount/boot
-	cp "$BOOTCONF" temp_mount/boot/grub
+	cp "$BOOTCONF" temp_mount/boot/grub/grub.cfg
 }
 
 linux_unmount_image () {

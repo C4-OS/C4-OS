@@ -56,6 +56,11 @@ kernel-clean:
 .PHONY: sigma0
 sigma0: $(BUILD)/c4-$(ARCH)-sigma0
 
+.PHONY: initfs-clean
+initfs-clean:
+	rm -rf $(BUILD)/initfs
+	rm -f  $(BUILD)/initfs.tar
+
 .PHONY: clean
 clean: $(ALL_CLEAN)
 	rm -rf $(BUILD)
@@ -64,8 +69,6 @@ clean: $(ALL_CLEAN)
 test: image
 	qemu-system-i386 \
 		-hda $(BUILD)/test.img \
-		-kernel $(BUILD)/c4-$(ARCH) \
-		-initrd $(BUILD)/c4-$(ARCH)-sigma0 \
 		-serial stdio -m 32 -s -enable-kvm
 
 .PHONY: image

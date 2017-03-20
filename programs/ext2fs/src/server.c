@@ -11,6 +11,7 @@ static ext2_inode_t    current_inode;
 
 static void handle_connect( ext2fs_t *fs, message_t *request );
 static void handle_disconnect( ext2fs_t *fs, message_t *request );
+static void handle_restore_state( ext2fs_t *fs, message_t *request );
 static void handle_set_node( ext2fs_t *fs, message_t *request );
 static void handle_list_dir( ext2fs_t *fs, message_t *request );
 static void handle_find_name( ext2fs_t *fs, message_t *request );
@@ -22,6 +23,7 @@ void ext2_handle_request( ext2fs_t *fs, message_t *request ){
 	switch ( request->type ){
 		case FS_MSG_CONNECT:       handle_connect( fs, request );       break;
 		case FS_MSG_DISCONNECT:    handle_disconnect( fs, request );    break;
+		case FS_MSG_RESTORE_STATE: handle_restore_state( fs, request ); break;
 		case FS_MSG_SET_NODE:      handle_set_node( fs, request );      break;
 		case FS_MSG_FIND_NAME:     handle_find_name( fs, request );     break;
 		case FS_MSG_GET_ROOT_DIR:  handle_get_rootdir( fs, request );   break;
@@ -100,6 +102,19 @@ static void handle_disconnect( ext2fs_t *fs, message_t *request ){
 
 	c4_msg_recieve( &msg, connection.client );
 	C4_ASSERT( msg.type == MESSAGE_TYPE_UNMAP );
+}
+
+static void handle_restore_state( ext2fs_t *fs, message_t *request ){
+	if ( !is_connected( request )){
+		send_error( request, FS_ERROR_NOT_CONNECTED );
+		return;
+	}
+
+	connection.state = request->data[0];
+	connection.index = request->data[1];
+
+	message_t msg = { .type = FS_MSG_COMPLETED, };
+	c4_msg_send( &msg, request->sender );
 }
 
 static void handle_set_node( ext2fs_t *fs, message_t *request ){

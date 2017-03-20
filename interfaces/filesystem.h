@@ -13,6 +13,7 @@ enum {
 	FS_MSG_BUFFER,
 	FS_MSG_CONNECT,
 	FS_MSG_DISCONNECT,
+	FS_MSG_RESTORE_STATE,
 
 	FS_MSG_FIND_NAME,
 	FS_MSG_GET_ROOT_DIR,
@@ -153,6 +154,28 @@ static inline void fs_disconnect( fs_connection_t *conn ){
 	conn->buffer = NULL;
 }
 
+static inline int fs_set_node( fs_connection_t *conn, fs_node_t *node );
+
+static inline int fs_restore_state( fs_connection_t *old_conn ){
+	message_t msg = {
+		.type = FS_MSG_RESTORE_STATE,
+		.data = {
+			old_conn->state,
+			old_conn->index,
+		},
+	};
+
+	int temp;
+	if (( temp = fs_set_node( old_conn, &old_conn->current_node )) <= 0 ){
+		return temp;
+	}
+
+	c4_msg_send( &msg, old_conn->server );
+	c4_msg_recieve( &msg, old_conn->server );
+
+	return msg.type == FS_MSG_ERROR? -msg.data[0] : 1;
+}
+
 static inline int fs_find_name( fs_connection_t *conn,
                                 fs_node_t *nodebuf,
                                 char *name,
@@ -201,7 +224,7 @@ static inline int fs_get_root_dir( unsigned id, fs_node_t *node ){
 	return 1;
 }
 
-static inline void fs_set_node( fs_connection_t *conn, fs_node_t *node ){
+static inline int fs_set_node( fs_connection_t *conn, fs_node_t *node ){
 	message_t msg = {
 		.type = FS_MSG_SET_NODE,
 		.data = { node->inode, },
@@ -211,6 +234,8 @@ static inline void fs_set_node( fs_connection_t *conn, fs_node_t *node ){
 
 	c4_msg_send( &msg, conn->server );
 	c4_msg_recieve( &msg, conn->server );
+
+	return msg.type == FS_MSG_ERROR? -msg.data[0] : 1;
 }
 
 static inline int fs_list_dir( fs_connection_t *conn ){

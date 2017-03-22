@@ -86,13 +86,34 @@ ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
 	return buffer;
 }
 
+static unsigned iexp( unsigned i, unsigned n ){
+	unsigned result = 1;
+
+	for ( unsigned k = 0; k < n; k++ ){
+		result *= i;
+	}
+
+	return result;
+}
+
 void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
 {
 	if ( block < 12 ){
 		return ext2_read_block( fs, inode->direct_ptr[block] );
+	}
 
-	} else if ( false ){
-		// TODO: singly-indirect, doubly-indirect and triply-indirect pointers
+	unsigned ptr_per_blk = ext2_block_size(fs) / sizeof(uint32_t);
+
+	if ( block < ptr_per_blk + 12 ){
+		unsigned index = block - 12;
+		uint32_t *ents = ext2_read_block( fs, inode->single_indirect_ptr );
+		return ext2_read_block( fs, ents[index] );
+
+	} else if ( block < iexp( ptr_per_blk, 2 ) + 12 ){
+		DEBUGF( "doing doubly-indirect block read\n", 0 );
+
+	} else if ( block < iexp( ptr_per_blk, 3 ) + 12 ){
+		DEBUGF( "doing triply-indirect block read\n", 0 );
 	}
 
 	return NULL;

@@ -1,5 +1,6 @@
-c4rt-src = $(wildcard $(LIBRARY_ROOT)/c4rt/src/*.c)
-c4rt-obj = $(c4rt-src:.c=.o)
+c4rt-src  = $(wildcard $(LIBRARY_ROOT)/c4rt/src/*.c)
+c4rt-src += $(wildcard $(LIBRARY_ROOT)/c4rt/src/stublibc/*.c)
+c4rt-obj  = $(c4rt-src:.c=.o)
 
 $(BUILD)/libs/c4rt.a: $(c4rt-obj)
 	ar rvs $@ $^

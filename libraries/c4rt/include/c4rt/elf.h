@@ -1,5 +1,6 @@
 #ifndef _C4RT_ELF_H
 #define _C4RT_ELF_H 1
+#include <stdbool.h>
 
 #define EI_NIDENT 16
 
@@ -225,6 +226,8 @@ typedef struct {
 	Elf32_Word  r_info;
 	Elf32_Sword r_append;
 } Elf32_Rela;
+
+bool elf_is_valid( Elf32_Ehdr * );
 
 Elf32_Shdr *elf_get_shdr( Elf32_Ehdr *, unsigned );
 Elf32_Shdr *elf_get_shdr_byname( Elf32_Ehdr *, char * );

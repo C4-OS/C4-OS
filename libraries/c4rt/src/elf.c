@@ -1,6 +1,13 @@
 #include <c4rt/elf.h>
 #include <c4rt/c4rt.h>
 
+bool elf_is_valid( Elf32_Ehdr *elf ){
+	return elf->e_ident[0] == ELFMAG0
+	    && elf->e_ident[1] == ELFMAG1
+	    && elf->e_ident[2] == ELFMAG2
+	    && elf->e_ident[3] == ELFMAG3;
+}
+
 Elf32_Shdr *elf_get_shdr( Elf32_Ehdr *, unsigned );
 Elf32_Shdr *elf_get_shdr_byname( Elf32_Ehdr *, char * );
 

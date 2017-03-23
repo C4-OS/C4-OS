@@ -9,10 +9,10 @@ enum {
 	PAGER_MSG_AVAILABLE_MEM,
 };
 
-void *pager_request_pages( unsigned  pager,
-                           uintptr_t virt,
-                           unsigned  permissions,
-                           unsigned  n_pages )
+static inline void *pager_request_pages( unsigned  pager,
+                                         uintptr_t virt,
+                                         unsigned  permissions,
+                                         unsigned  n_pages )
 {
 	message_t msg = {
 		.type = PAGER_MSG_REQUEST_PAGES,
@@ -29,7 +29,7 @@ void *pager_request_pages( unsigned  pager,
 	return (void *)virt;
 }
 
-unsigned long pager_available_mem( unsigned pager ){
+static inline unsigned long pager_available_mem( unsigned pager ){
 	message_t msg = { .type = PAGER_MSG_AVAILABLE_MEM, };
 
 	c4_msg_send( &msg, pager );

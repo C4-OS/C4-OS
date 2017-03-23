@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <nameserver/nameserver.h>
 #include <interfaces/console.h>
+#include <interfaces/keyboard.h>
 
 static unsigned display = 0;
 static unsigned keyboard = 0;
@@ -18,110 +19,23 @@ static void debug_print( const char *s ){
 	}
 }
 
-/*
 static char *read_line( char *buf, unsigned n ){
-	message_t msg;
-	unsigned i = 0;
-
-	for ( i = 0; i < n - 1; i++ ){
-retry:
-		c4_msg_recieve( &msg, 0 );
-
-		if ( msg.type != 0xbabe )
-			goto retry;
-
-		char c = msg.data[0];
-
-		c4_msg_send( &msg, display );
-
-		if ( i && c == '\b' ){
-			i--;
-			goto retry;
-		}
-
-		buf[i] = c;
-
-		if ( c == '\n' ){
-			break;
-		}
-	}
-
-	buf[++i] = '\0';
-
-	return buf;
-}
-*/
-
-
-enum {
-	CODE_ESCAPE,
-	CODE_TAB,
-	CODE_LEFT_CONTROL,
-	CODE_RIGHT_CONTROL,
-	CODE_LEFT_SHIFT,
-	CODE_RIGHT_SHIFT,
-};
-
-const char lowercase[] =
-	{ '`', CODE_ESCAPE, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-',
-	  '=', '\b', CODE_TAB, 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
-	  '[', ']', '\n', CODE_LEFT_CONTROL, 'a', 's', 'd', 'f', 'g', 'h', 'j',
-	  'k', 'l', ';', '\'', '?', CODE_LEFT_SHIFT, '?', 'z', 'x', 'c', 'v', 'b',
-	  'n', 'm', ',', '.', '/', CODE_RIGHT_SHIFT, '_', '_', ' ', '_', '_', '_',
-	  '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_',
-	};
-
-const char uppercase[] =
-	{ '~', CODE_ESCAPE, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_',
-	  '+', '\b', CODE_TAB, 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
-	  '{', '}', '\n', CODE_LEFT_CONTROL, 'A', 'S', 'D', 'F', 'G', 'H', 'J',
-	  'K', 'L', ':', '"', '?', CODE_LEFT_SHIFT, '?', 'Z', 'X', 'C', 'V', 'B',
-	  'N', 'M', '<', '>', '?', CODE_RIGHT_SHIFT, '_', '_', ' ', '_', '_', '_',
-	  '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_', '_',
-	};
-
-char decode_scancode( unsigned long code ){
-	static bool is_uppercase = false;
-	char c = is_uppercase? uppercase[code] : lowercase[code];
-	char ret = '\0';
-
-	switch ( c ){
-		case CODE_LEFT_SHIFT:
-		case CODE_RIGHT_SHIFT:
-			is_uppercase = !is_uppercase;
-			break;
-
-		default:
-			ret = c;
-			break;
-	}
-
-	return ret;
-}
-
-// XXX: old read line from sigma0, used until a proper console/display program
-//      to multiplex the display and peripherals is written
-static char *read_line( char *buf, unsigned n ){
-	message_t msg;
 	unsigned i = 0;
 
 	for ( i = 0; i < n - 1; i++ ){
 		char c = 0;
 retry:
 		{
-			// XXX: this relies on the /bin/keyboard program being started,
-			//      which itself is initialized by the forth interpreter,
-			//      so this assumes that the program will be started by the
-			//      init_commands.fs script before entering interactive mode
-			msg.type = 0xbadbeef;
-			c4_msg_send( &msg, keyboard );
-			c4_msg_recieve( &msg, keyboard );
+			keyboard_event_t ev;
+			keyboard_get_event( keyboard, &ev );
 
-			c = decode_scancode( msg.data[0] );
-
-			if ( !c || msg.data[1] != 0 ){
+			if ( keyboard_event_is_modifier( &ev ))
 				goto retry;
-			}
+
+			if ( ev.event != KEYBOARD_EVENT_KEY_DOWN )
+				goto retry;
+
+			c = ev.character;
 		}
 
 		console_put_char( display, c );

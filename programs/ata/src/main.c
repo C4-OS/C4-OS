@@ -47,12 +47,9 @@ void _start( uintptr_t nameserver ){
 
 	while ( true ){
 		message_t msg;
-
-		c4_debug_printf( "--- ata: waiting for a message...\n" );
 		c4_msg_recieve( &msg, 0 );
 
 		if ( msg.type == BLOCK_MSG_READ || msg.type == BLOCK_MSG_WRITE ){
-			c4_debug_printf( "--- ata: got request from %u\n", msg.sender );
 			ata_handle_access( &msg );
 
 		} else {
@@ -88,9 +85,6 @@ void ata_handle_access( message_t *request ){
 	C4_ASSERT( msg.data[0] == 0xc0000000 );
 
 	if ( request->type == BLOCK_MSG_READ ){
-		c4_debug_printf( "--- ata: reading %u sectors for %u at %x\n",
-				sectors, request->sender, location );
-
 		ide_pio_read( device, (void *)0xc0000000, location, sectors );
 
 	} else {

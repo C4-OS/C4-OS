@@ -4,8 +4,11 @@
 #include <c4/message.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
-#define NULL ((void *)0)
+// magic value which is passed by the elf loader to signal that it's using
+// the c4rt parameter convention
+#define C4RT_INIT_MAGIC 0x10adab1e
 
 #define DO_SYSCALL(N, A, B, C, D, RET) \
 	asm volatile ( " \

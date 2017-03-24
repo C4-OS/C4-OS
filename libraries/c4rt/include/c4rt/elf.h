@@ -228,6 +228,7 @@ typedef struct {
 } Elf32_Rela;
 
 bool elf_is_valid( Elf32_Ehdr * );
+int elf_load( Elf32_Ehdr *elf, int nameserver, char **argv, char **envp );
 
 Elf32_Shdr *elf_get_shdr( Elf32_Ehdr *, unsigned );
 Elf32_Shdr *elf_get_shdr_byname( Elf32_Ehdr *, char * );

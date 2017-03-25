@@ -82,3 +82,33 @@ WEAK int strcmp( const char *s1, const char *s2 ){
 
 	return *s1 == *s2;
 }
+
+WEAK int strncmp( const char *s1, const char *s2, size_t n ){
+	for ( size_t i = 0; i < n && *s1 && *s2; i++, s1++, s2++ ){
+		if ( *s1 == *s2 ) continue;
+		if ( *s1 <  *s2 ) return -1;
+		if ( *s1 >  *s2 ) return 1;
+	}
+
+	return *s1 == *s2;
+}
+
+WEAK char *strchr( const char *s, int c ){
+	for ( ; *s; s++ ){
+		if ( *s == c )
+			return (char *)s;
+	}
+
+	return NULL;
+}
+
+WEAK size_t strcspn( const char *s, const char *reject ){
+	size_t ret = 0;
+
+	for ( ; s[ret]; ret++ ){
+		if ( strchr( reject, s[ret] ))
+			break;
+	}
+
+	return ret;
+}

@@ -1,4 +1,4 @@
-initsys-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/c4alloc.a
+initsys-libs = $(BUILD)/libs/c4rt.a
 initsys-src  = $(wildcard $(PROGRAM_ROOT)/initsys/src/*.c)
 initsys-obj  = $(initsys-src:.c=.o)
 

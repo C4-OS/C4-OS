@@ -1,5 +1,4 @@
-forth-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/miniforth.a \
-	         $(BUILD)/libs/c4alloc.a
+forth-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/miniforth.a
 forth-src  = $(wildcard $(PROGRAM_ROOT)/forth/src/*.c)
 forth-obj  = $(forth-src:.c=.o)
 

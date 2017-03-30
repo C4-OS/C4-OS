@@ -1,5 +1,5 @@
-initprog-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/miniforth.a \
-                $(BUILD)/libs/c4alloc.a
+initprog-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/miniforth.a
+
 
 $(BUILD)/bin/keyboard: $(PROGRAM_ROOT)/initprogs/src/keyboard.o $(initprog-libs)
 	@echo CC $^ -o $@
@@ -30,6 +30,10 @@ $(BUILD)/bin/atatest: $(PROGRAM_ROOT)/initprogs/src/atatest.o $(initprog-libs)
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
 
 $(BUILD)/bin/fstest: $(PROGRAM_ROOT)/initprogs/src/fstest.o $(initprog-libs)
+	@echo CC $^ -o $@
+	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+
+$(BUILD)/bin/clibtest: $(PROGRAM_ROOT)/initprogs/src/clibtest.o $(initprog-libs)
 	@echo CC $^ -o $@
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
 
@@ -74,6 +78,11 @@ initprogs-fstest-clean:
 	rm -f $(BUILD)/bin/fstest
 	rm -f $(PROGRAM_ROOT)/initprogs/src/fstest.o
 
+.PHONY: initprogs-clibtest-clean
+initprogs-clibtest-clean:
+	rm -f $(BUILD)/bin/clibtest
+	rm -f $(PROGRAM_ROOT)/initprogs/src/clibtest.o
+
 
 ALL_PROGRAMS += $(BUILD)/bin/keyboard
 ALL_PROGRAMS += $(BUILD)/bin/test
@@ -83,6 +92,7 @@ ALL_PROGRAMS += $(BUILD)/bin/ipcbench
 ALL_PROGRAMS += $(BUILD)/bin/alloctest
 ALL_PROGRAMS += $(BUILD)/bin/atatest
 ALL_PROGRAMS += $(BUILD)/bin/fstest
+ALL_PROGRAMS += $(BUILD)/bin/clibtest
 ALL_CLEAN    += initprogs-keyboard-clean
 ALL_CLEAN    += initprogs-test-clean
 ALL_CLEAN    += initprogs-pci-clean
@@ -91,3 +101,4 @@ ALL_CLEAN    += initprogs-ipcbench-clean
 ALL_CLEAN    += initprogs-alloctest-clean
 ALL_CLEAN    += initprogs-atatest-clean
 ALL_CLEAN    += initprogs-fstest-clean
+ALL_CLEAN    += initprogs-clibtest-clean

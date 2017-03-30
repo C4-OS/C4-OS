@@ -9,6 +9,7 @@
 
 enum {
 	FILE_STATUS_PRETTY_GOOD,
+	FILE_STATUS_CLOSED,
 	FILE_STATUS_END_OF_FILE,
 	FILE_STATUS_ERROR,
 };
@@ -38,8 +39,8 @@ typedef struct c_filestruct {
 } FILE;
 
 FILE *fopen( const char *path, const char *mode );
-FILE *fclose( FILE *fp );
-FILE *freopen( FILE *fp );
+int   fclose( FILE *fp );
+FILE *freopen( const char *path, const char *mode, FILE *fp );
 size_t fread( void *ptr, size_t size, size_t members, FILE *fp );
 size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
 char *fgets( char *s, int size, FILE *stream );

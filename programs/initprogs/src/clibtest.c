@@ -10,8 +10,8 @@ int main( int argc, char *argv[], char *envp[] ){
 	c4_debug_printf( "--- %s: %u args\n", progname, argc );
 
 	FILE *foo = fopen( "/sbin/////forth", "r" );
-
 	c4_debug_printf( "--- %s: got %p\n", progname, foo );
+	fclose( foo );
 
 	return 0;
 }

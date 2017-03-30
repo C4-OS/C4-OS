@@ -93,8 +93,23 @@ FILE *fopen( const char *path, const char *mode ){
 	return ret;
 }
 
-FILE *fclose( FILE *fp );
-FILE *freopen( FILE *fp );
+int fclose( FILE *fp ){
+	fp->status = FILE_STATUS_CLOSED;
+	return 0;
+}
+
+FILE *freopen( const char *path, const char *mode, FILE *fp ){
+	FILE *temp = fopen( path, mode );
+
+	if ( temp ){
+		fclose( fp );
+		*fp = *temp;
+		return fp;
+	}
+
+	return NULL;
+}
+
 size_t fread( void *ptr, size_t size, size_t members, FILE *fp );
 size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
 char *fgets( char *s, int size, FILE *stream );

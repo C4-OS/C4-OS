@@ -32,3 +32,4 @@ INITFS_PROGRAMS += $(BUILD)/bin/initsys
 INITSYS_PROGRAMS += $(BUILD)/bin/keyboard
 INITSYS_PROGRAMS += $(BUILD)/bin/display
 INITSYS_PROGRAMS += $(BUILD)/bin/forth
+INITSYS_PROGRAMS += $(BUILD)/bin/clibtest

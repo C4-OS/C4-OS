@@ -1,11 +1,13 @@
 #include <c4rt/c4rt.h>
 #include <c4rt/stublibc.h>
 #include <c4rt/compiler.h>
+#include <c4alloc/c4alloc.h>
 
 // having a global variable here is ok, because 'env' in _start
 // will be valid for the lifetime of the program
 static char **global_env = NULL;
 static unsigned global_nameserv = 0;
+static c4a_heap_t global_heap;
 
 WEAK char *getenv( const char *name ){
 	if ( !global_env )
@@ -30,6 +32,10 @@ WEAK unsigned getnameserv( void ){
 	return global_nameserv;
 }
 
+WEAK c4a_heap_t *getc4heap( void ){
+	return &global_heap;
+}
+
 WEAK int main( int argc, char **argv, char **envp ){
 	unsigned id = c4_get_id();
 
@@ -47,6 +53,8 @@ WEAK int main( int argc, char **argv, char **envp ){
 //       in registers instead of the stack
 WEAK void _start( unsigned nameserv, char **args, char **env, unsigned magic ){
 	extern int main( int argc, char **argv, char **envp );
+
+	c4a_heap_init( &global_heap, 0xe0000000 );
 	global_nameserv = nameserv;
 
 	if ( magic == C4RT_INIT_MAGIC ){

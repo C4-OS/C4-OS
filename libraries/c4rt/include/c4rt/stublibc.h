@@ -20,6 +20,16 @@ enum {
 	FILE_MODE_APPEND = 1 << 3,
 };
 
+enum {
+	EOF = -1,
+};
+
+// errno errors
+enum {
+	ENONE,
+	EBADF,
+};
+
 // stdlib functions
 void *malloc( size_t size );
 void free( void *ptr );
@@ -28,12 +38,15 @@ void realloc( void *ptr, size_t size );
 
 // file functions
 typedef struct c_filestruct {
+	fs_connection_t conn;
 	unsigned  server;
 	unsigned  status;
 	fs_node_t node;
 	int       charbuf;
 	char      mode;
 
+	bool      have_char;
+	bool      used;
 	// TODO: do we need read/write offsets here?
 } FILE;
 

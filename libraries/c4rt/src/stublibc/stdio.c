@@ -67,8 +67,8 @@ FILE *fopen( const char *path, const char *mode ){
 		size_t maxlen = sizeof( namebuf );
 
 		if ( foo == 0 ){
-			c4_debug_printf( "--- found node: %u\n", temp.inode );
-			ret = malloc( sizeof( FILE ));
+			ret          = malloc( sizeof( FILE ));
+			ret->conn    = (fs_connection_t){};
 			ret->server  = conn.server;
 			ret->status  = FILE_STATUS_PRETTY_GOOD;
 			ret->node    = temp;
@@ -89,7 +89,6 @@ FILE *fopen( const char *path, const char *mode ){
 	}
 
 	fs_disconnect( &conn );
-
 	return ret;
 }
 
@@ -116,7 +115,15 @@ size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
 	size_t len = size * members;
 
 	fs_connect( fp->server, fs_buffer, &conn );
-	fs_set_node( &conn, &fp->node );
+
+	if ( fp->used ){
+		c4_debug_printf( "--- asdf: %u\n", fp->conn.index );
+		fs_restore_state( &fp->conn );
+		conn = fp->conn;
+
+	} else {
+		fs_set_node( &conn, &fp->node );
+	}
 
 	size_t ret = 0;
 	int nread = 0;
@@ -126,13 +133,40 @@ size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
 		len -= nread;
 	}
 
+	fp->used = true;
+	fp->conn = conn;
 	fs_disconnect( &conn );
 	return ret;
 }
 
 size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
 char *fgets( char *s, int size, FILE *stream );
-int   fgetc( FILE *stream );
+
+int fgetc( FILE *stream ){
+	if ( stream->status != FILE_STATUS_PRETTY_GOOD ){
+		return -EBADF;
+	}
+
+	char c;
+	size_t nread = fread( &c, 1, 1, stream );
+
+	if ( nread > 0 ){
+		return c;
+
+	} else {
+		stream->status = FILE_STATUS_END_OF_FILE;
+		return EOF;
+	}
+}
+
 int   getc( FILE *stream );
 int   getchar( void );
 int   ungetc( int c, FILE *stream );
+
+void clearerr( FILE *fp );
+
+int feof( FILE *fp ){
+	return fp->status == FILE_STATUS_END_OF_FILE;
+}
+
+int ferror( FILE *fp );

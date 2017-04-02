@@ -277,11 +277,12 @@ static inline int fs_read_block( fs_connection_t *conn,
 			c4_debug_printf( "--- error: %u\n", msg.data[0] );
 			return -msg.data[0];
 		}
-
-		msg.type = MESSAGE_TYPE_DUMP_MAPS;
 	}
 
-	return c4_ringbuf_read( conn->buffer, buffer, maxlen );
+	int n = c4_ringbuf_read( conn->buffer, buffer, maxlen );
+	conn->index += n;
+
+	return n;
 }
 
 #endif

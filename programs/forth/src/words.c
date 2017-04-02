@@ -1,4 +1,5 @@
 #include <c4rt/c4rt.h>
+#include <c4rt/stublibc.h>
 #include <c4/paging.h>
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
@@ -7,6 +8,22 @@
 #include <interfaces/console.h>
 #include <nameserver/nameserver.h>
 #include <c4alloc/c4alloc.h>
+
+static inline void *popptr( minift_vm_t *vm ){
+	return (void *)minift_pop( vm, &vm->param_stack );
+}
+
+static inline unsigned long popnum( minift_vm_t *vm ){
+	return minift_pop( vm, &vm->param_stack );
+}
+
+static inline void pushptr( minift_vm_t *vm, void *ptr ){
+	minift_push( vm, &vm->param_stack, (uintptr_t)ptr );
+}
+
+static inline void pushnum( minift_vm_t *vm, unsigned long n ){
+	minift_push( vm, &vm->param_stack, n );
+}
 
 static bool c4_minift_sendmsg( minift_vm_t *vm ){
 	unsigned long target = minift_pop( vm, &vm->param_stack );
@@ -141,6 +158,12 @@ static bool c4_minift_name_lookup( minift_vm_t *vm ){
 	return true;
 }
 
+static bool c4_minift_key( minift_vm_t *vm ){
+	pushnum( vm, minift_get_char( ));
+
+	return true;
+}
+
 static c4a_heap_t minift_heap;
 
 static bool c4_minift_allocate( minift_vm_t *vm ){
@@ -169,7 +192,68 @@ static bool c4_minift_free( minift_vm_t *vm ){
 	return true;
 }
 
+static bool c4_minift_open_file( minift_vm_t *vm ){
+	char *fam  = popptr( vm );
+	char *name = popptr( vm );
+
+	FILE *fp = fopen( name, fam );
+
+	pushptr( vm, fp );
+	pushnum( vm, fp? 0 : 1 );
+
+	return true;
+}
+
+static bool c4_minift_close_file( minift_vm_t *vm ){
+	fclose( popptr( vm ));
+
+	return true;
+}
+
+static bool c4_minift_read_file( minift_vm_t *vm ){
+	FILE *fp          = popptr( vm );
+	unsigned long len = popnum( vm );
+	char *buf         = popptr( vm );
+
+	unsigned long n = fread( buf, len, 1, fp );
+
+	pushnum( vm, n );
+	pushnum( vm, ferror(fp) );
+
+	return true;
+}
+
+static bool c4_minift_read_line( minift_vm_t *vm ){
+	FILE *fp          = popptr( vm );
+	unsigned long len = popnum( vm );
+	char *buf         = popptr( vm );
+
+	fgets( buf, len, fp );
+
+	pushnum( vm, strlen(buf) );
+	pushnum( vm, ferror(fp) );
+
+	return true;
+}
+
+static bool c4_minift_write_file( minift_vm_t *vm ){
+	return true;
+}
+
+static bool c4_minift_write_line( minift_vm_t *vm ){
+	return true;
+}
+
+extern void set_cur_include( FILE *fp );
+
+static bool c4_minift_include_file( minift_vm_t *vm ){
+	set_cur_include( popptr( vm ));
+
+	return true;
+}
+
 static minift_archive_entry_t c4_words[] = {
+	// general interface words
 	{ "sendmsg",  c4_minift_sendmsg, 0 },
 	{ "recvmsg",  c4_minift_recvmsg, 0 },
 	{ "block@",   c4_minift_block_read, 0 },
@@ -179,10 +263,21 @@ static minift_archive_entry_t c4_words[] = {
 	{ "clear",    c4_minift_console_clear, 0 },
 	{ "consinfo", c4_minift_console_info, 0 },
 	{ "lookup",   c4_minift_name_lookup, 0 },
+	{ "key",      c4_minift_key, 0 },
 
+	// allocation words
+	// TODO: implement 'resize' once realloc is implemented in c4alloc
 	{ "allocate", c4_minift_allocate },
 	{ "free",     c4_minift_free },
-	// TODO: implement 'resize' once realloc is implemented in c4alloc
+
+	// file words
+	{ "open-file",    c4_minift_open_file },
+	{ "close-file",   c4_minift_close_file },
+	{ "read-file",    c4_minift_read_file },
+	{ "read-line",    c4_minift_read_line },
+	{ "write-file",   c4_minift_write_file },
+	{ "write-line",   c4_minift_write_line },
+	{ "include-file", c4_minift_include_file },
 };
 
 static minift_archive_t c4_archive = {

@@ -1,4 +1,5 @@
 #include <c4rt/c4rt.h>
+#include <c4rt/stublibc.h>
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
 #include <stdint.h>
@@ -19,8 +20,10 @@ static void debug_print( const char *s ){
 	}
 }
 
-static char *read_line( char *buf, unsigned n ){
+static char *read_keyboard( char *buf, unsigned n ){
 	unsigned i = 0;
+
+	debug_print( "miniforth > " );
 
 	for ( i = 0; i < n - 1; i++ ){
 		char c = 0;
@@ -57,8 +60,40 @@ retry:
 	return buf;
 }
 
+static FILE *cur_include = NULL;
+
+void set_cur_include( FILE *fp ){
+	cur_include = fp;
+}
+
+static char *read_include_file( char *buf, unsigned n ){
+	buf[0] = '\0';
+
+	if ( !cur_include ){
+		return buf;
+	}
+
+	fgets( buf, n, cur_include );
+	if ( strlen( buf ) == 0 ){
+		cur_include = NULL;
+	}
+
+	c4_debug_printf( "--- forth: read \"%s\"\n", buf );
+
+	return buf;
+}
+
+static char *read_line( char *buf, unsigned n ){
+	if ( cur_include ){
+		return read_include_file( buf, n );
+
+	} else {
+		return read_keyboard( buf, n );
+	}
+}
+
 char minift_get_char( void ){
-	static char input[80];
+	static char input[128];
 	static bool initialized = false;
 	static char *ptr;
 
@@ -67,15 +102,20 @@ char minift_get_char( void ){
 		// left here in case some sort of init script is added in the future
 		//ptr = input;
 		ptr =
-			": pstring while dup c@ 0 != begin dup c@ emit 1 + repeat ; "
-			"\"hellow, world!\" pstring cr\n"
+			" : pstring while dup c@ 0 != begin dup c@ emit 1 + repeat ; "
+			" \">> Type 'loadlibs' to load the default libraries.\" pstring cr "
+			""
+			" : loadlibs "
+			"   \"/data/forth/c4.fs\" \"r\" open-file if 0 = then "
+			"     include-file "
+			"   end "
+			" ; "
 		;
 
 		initialized = true;
 	}
 
 	while ( !*ptr ){
-		debug_print( "miniforth > " );
 		ptr = read_line( input, sizeof( input ));
 	}
 
@@ -89,10 +129,13 @@ void minift_put_char( char c ){
 void add_c4_archives( minift_vm_t *vm );
 void init_c4_allocator( minift_vm_t *vm );
 
-void _start( uintptr_t nameserver ){
-	unsigned long data[512];
-	unsigned long calls[32];
-	unsigned long params[32];
+static unsigned long data[0x8000];
+
+//void _start( uintptr_t nameserver ){
+int main( int argc, char *argv[], char *envp[] ){
+	unsigned long calls[128];
+	unsigned long params[128];
+	unsigned long nameserver = getnameserv();
 
 	// TODO: implement a better way of waiting for devices to avoid polling
 	while ( !display ){
@@ -106,19 +149,19 @@ void _start( uintptr_t nameserver ){
 	minift_vm_t foo;
 	minift_stack_t data_stack = {
 		.start = data,
-		.end   = data + 256,
+		.end   = data + sizeof(data) / sizeof(unsigned long),
 		.ptr   = data,
 	};
 
 	minift_stack_t call_stack = {
 		.start = calls,
-		.end   = calls + 32,
+		.end   = calls + 128,
 		.ptr   = calls,
 	};
 
 	minift_stack_t param_stack = {
 		.start = params,
-		.end   = params + 32,
+		.end   = params + 128,
 		.ptr   = params,
 	};
 
@@ -127,5 +170,5 @@ void _start( uintptr_t nameserver ){
 	add_c4_archives( &foo );
 	minift_run( &foo );
 
-	c4_exit();
+	return 0;
 }

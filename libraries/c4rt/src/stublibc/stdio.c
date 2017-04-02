@@ -140,7 +140,23 @@ size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
 }
 
 size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
-char *fgets( char *s, int size, FILE *stream );
+
+char *fgets( char *s, int size, FILE *stream ){
+	size_t n = 0;
+	char c = fgetc( stream );
+
+	while ( !feof(stream) && n < size - 1 ){
+		s[n++] = c;
+
+		if ( c == '\n' )
+			break;
+
+		c = fgetc( stream );
+	}
+
+	s[n] = '\0';
+	return s;
+}
 
 int fgetc( FILE *stream ){
 	if ( stream->status != FILE_STATUS_PRETTY_GOOD ){
@@ -159,9 +175,12 @@ int fgetc( FILE *stream ){
 	}
 }
 
-int   getc( FILE *stream );
-int   getchar( void );
-int   ungetc( int c, FILE *stream );
+int getc( FILE *stream ){
+	return fgetc( stream );
+}
+
+int getchar( void );
+int ungetc( int c, FILE *stream );
 
 void clearerr( FILE *fp );
 
@@ -169,4 +188,6 @@ int feof( FILE *fp ){
 	return fp->status == FILE_STATUS_END_OF_FILE;
 }
 
-int ferror( FILE *fp );
+int ferror( FILE *fp ){
+	return fp->status != FILE_STATUS_PRETTY_GOOD;
+}

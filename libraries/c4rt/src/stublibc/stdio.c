@@ -57,7 +57,7 @@ FILE *fopen( const char *path, const char *mode ){
 	FILE *ret = NULL;
 	char namebuf[FS_MAX_NAME_LEN + 1];
 	fs_node_t temp = (*path == '/')? path++, root_dir : current_dir;
-	fs_connection_t conn;
+	fs_connection_t conn = {};
 
 	fs_connect( root_server, fs_buffer, &conn );
 
@@ -110,7 +110,26 @@ FILE *freopen( const char *path, const char *mode, FILE *fp ){
 	return NULL;
 }
 
-size_t fread( void *ptr, size_t size, size_t members, FILE *fp );
+size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
+	fs_connection_t conn = {};
+	uint8_t *buffer = ptr;
+	size_t len = size * members;
+
+	fs_connect( fp->server, fs_buffer, &conn );
+	fs_set_node( &conn, &fp->node );
+
+	size_t ret = 0;
+	int nread = 0;
+
+	while (( nread = fs_read_block( &conn, buffer + ret, len )) > 0 ){
+		ret += nread;
+		len -= nread;
+	}
+
+	fs_disconnect( &conn );
+	return ret;
+}
+
 size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
 char *fgets( char *s, int size, FILE *stream );
 int   fgetc( FILE *stream );

@@ -28,7 +28,6 @@ void realloc( void *ptr, size_t size );
 
 // file functions
 typedef struct c_filestruct {
-	fs_connection_t connection;
 	unsigned  server;
 	unsigned  status;
 	fs_node_t node;

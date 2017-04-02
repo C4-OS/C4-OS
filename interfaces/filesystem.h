@@ -150,8 +150,6 @@ static inline void fs_disconnect( fs_connection_t *conn ){
 	c4_mem_unmap( conn->server, conn->buffer );
 
 	conn->state  = FS_STATE_DISCONNECTED;
-	conn->server = 0;
-	conn->buffer = NULL;
 }
 
 static inline int fs_set_node( fs_connection_t *conn, fs_node_t *node );
@@ -280,6 +278,57 @@ static inline int fs_read_block( fs_connection_t *conn,
 	}
 
 	int n = c4_ringbuf_read( conn->buffer, buffer, maxlen );
+	conn->index += n;
+
+	return n;
+}
+
+static inline void fs_set_connection_info( fs_connection_t *conn,
+                                           fs_node_t *node,
+                                           unsigned server,
+                                           void *page )
+{
+    C4_ASSERT( conn );
+    C4_ASSERT( conn->state == FS_STATE_DISCONNECTED );
+
+    c4_ringbuf_init( page, PAGE_SIZE );
+
+    conn->server       = server;
+    conn->buffer       = page;
+    conn->current_node = *node;
+}
+
+static inline int fs_read_block_autoconn( fs_connection_t *conn,
+                                          void *databuf,
+                                          size_t maxlen )
+{
+	if ( c4_ringbuf_empty( conn->buffer )){
+		bool should_disconnect = false;
+		message_t msg = {
+			.type = FS_MSG_READ_BLOCK,
+			.data = { 0, },
+		};
+
+		if ( conn->state == FS_STATE_DISCONNECTED ){
+			fs_connect( conn->server, conn->buffer, conn );
+			fs_restore_state( conn );
+			should_disconnect = true;
+		}
+
+		c4_msg_send( &msg, conn->server );
+		c4_msg_recieve( &msg, conn->server );
+
+		if ( should_disconnect ){
+			fs_disconnect( conn );
+		}
+
+		if ( msg.type == FS_MSG_ERROR ){
+			c4_debug_printf( "--- error: %u\n", msg.data[0] );
+			return -msg.data[0];
+		}
+	}
+
+	int n = c4_ringbuf_read( conn->buffer, databuf, maxlen );
 	conn->index += n;
 
 	return n;

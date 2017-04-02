@@ -67,13 +67,15 @@ FILE *fopen( const char *path, const char *mode ){
 		size_t maxlen = sizeof( namebuf );
 
 		if ( foo == 0 ){
-			ret          = malloc( sizeof( FILE ));
-			ret->conn    = (fs_connection_t){};
+			ret          = calloc( 1, sizeof( FILE ));
 			ret->server  = conn.server;
 			ret->status  = FILE_STATUS_PRETTY_GOOD;
 			ret->node    = temp;
 			ret->charbuf = '\0';
 			ret->mode    = translate_modeflags( mode );
+			ret->conn    = (fs_connection_t){ };
+
+			fs_set_connection_info( &ret->conn, &temp, conn.server, fs_buffer );
 			break;
 		}
 
@@ -114,28 +116,15 @@ size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
 	uint8_t *buffer = ptr;
 	size_t len = size * members;
 
-	fs_connect( fp->server, fs_buffer, &conn );
-
-	if ( fp->used ){
-		c4_debug_printf( "--- asdf: %u\n", fp->conn.index );
-		fs_restore_state( &fp->conn );
-		conn = fp->conn;
-
-	} else {
-		fs_set_node( &conn, &fp->node );
-	}
-
 	size_t ret = 0;
 	int nread = 0;
 
-	while (( nread = fs_read_block( &conn, buffer + ret, len )) > 0 ){
+	while (( nread = fs_read_block_autoconn(&fp->conn, buffer + ret, len)) > 0 )
+	{
 		ret += nread;
 		len -= nread;
 	}
 
-	fp->used = true;
-	fp->conn = conn;
-	fs_disconnect( &conn );
 	return ret;
 }
 

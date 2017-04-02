@@ -299,6 +299,7 @@ static void handle_read_block( ext2fs_t *fs, message_t *request ){
 	size_t index     = connection.index;
 	size_t diff      = size - index;
 	size_t writesize = (diff > blocksize)? blocksize : diff;
+	size_t offset    = index % blocksize;
 
 	if ( !c4_ringbuf_can_write( connection.buffer, writesize )){
 		send_error( request, FS_ERROR_QUEUE_FULL );
@@ -306,8 +307,8 @@ static void handle_read_block( ext2fs_t *fs, message_t *request ){
 	}
 
 	unsigned block = connection.index / blocksize;
-	void *foo = ext2_inode_read_block( fs, &current_inode, block );
-	size_t wrote = c4_ringbuf_write( connection.buffer, foo, writesize );
+	uint8_t *foo = ext2_inode_read_block( fs, &current_inode, block );
+	size_t wrote = c4_ringbuf_write( connection.buffer, foo + offset, writesize );
 
 	sent += writesize;
 	connection.index += writesize;

@@ -14,7 +14,6 @@ do_all: all
 -include sigma0/objs.mk
 
 ALL_TARGETS  += kernel sigma0 $(ALL_PROGRAMS)
-#ALL_CLEAN    += kernel-clean sigma0-clean
 ALL_CLEAN    += kernel-clean
 
 .PHONY: all
@@ -25,6 +24,7 @@ $(BUILD):
 	mkdir -p $(BUILD)/bin
 	mkdir -p $(BUILD)/src
 	mkdir -p $(BUILD)/libs
+	mkdir -p $(BUILD)/tree
 
 $(BUILD)/c4-$(ARCH): $(BUILD)
 	@cd kernel; \
@@ -43,6 +43,7 @@ $(BUILD)/test.img: kernel sigma0 $(INITSYS_PROGRAMS)
 		$(TOOL_ROOT)/bootconf-$(ARCH) \
 		$(BUILD)/c4-$(ARCH) \
 		$(BUILD)/c4-$(ARCH)-sigma0 \
+		$(BUILD)/tree \
 		$(INITSYS_PROGRAMS)
 
 .PHONY: kernel

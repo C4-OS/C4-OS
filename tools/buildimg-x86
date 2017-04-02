@@ -7,7 +7,7 @@ fi
 
 if [ $# -lt 5 ]; then
 	echo "usage: ./buildimg [output image] [bootload config]" \
-	     "[kernel] [sigma0] [init programs ...]"
+	     "[kernel] [sigma0] [root fs dir] [init programs ...]"
 	exit 1
 fi
 
@@ -15,11 +15,13 @@ IMAGE="$1";    shift
 BOOTCONF="$1"; shift
 KERNEL="$1";   shift
 SIGMA0="$1";   shift
+FSTREE="$1";   shift
 EXISTS=`test -e $IMAGE; echo $?`
 
 copy_files () {
 	mkdir -p temp_mount/sbin
 	mkdir -p temp_mount/boot
+	cp -r "$FSTREE"/* temp_mount
 	cp $@ temp_mount/sbin
 }
 

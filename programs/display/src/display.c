@@ -1,5 +1,5 @@
 #include <display/display.h>
-#include <interfaces/console.h>
+#include <c4rt/interface/console.h>
 #include <nameserver/nameserver.h>
 #include <c4rt/c4rt.h>
 #include <c4/paging.h>

@@ -1,5 +1,5 @@
 #include <nameserver/nameserver.h>
-#include <interfaces/keyboard.h>
+#include <c4rt/interface/keyboard.h>
 #include <c4rt/c4rt.h>
 #include <c4/arch/interrupts.h>
 #include <stdbool.h>

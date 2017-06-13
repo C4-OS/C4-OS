@@ -3,7 +3,7 @@
 #include <c4rt/compiler.h>
 #include <c4rt/stublibc.h>
 #include <nameserver/nameserver.h>
-#include <interfaces/filesystem.h>
+#include <c4rt/interface/filesystem.h>
 #include <c4/paging.h>
 #include <stdint.h>
 #include <stddef.h>

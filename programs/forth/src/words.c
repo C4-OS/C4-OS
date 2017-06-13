@@ -4,8 +4,8 @@
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
 
-#include <interfaces/block.h>
-#include <interfaces/console.h>
+#include <c4rt/interface/block.h>
+#include <c4rt/interface/console.h>
 #include <nameserver/nameserver.h>
 #include <c4alloc/c4alloc.h>
 

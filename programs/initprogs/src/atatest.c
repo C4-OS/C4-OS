@@ -1,6 +1,6 @@
 #include <c4rt/c4rt.h>
 #include <nameserver/nameserver.h>
-#include <interfaces/block.h>
+#include <c4rt/interface/block.h>
 #include <c4/paging.h>
 #include <stdint.h>
 #include <stddef.h>

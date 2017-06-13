@@ -2,7 +2,7 @@
 #define _C4RT_STUB_LIBC_H 1
 #include <c4rt/compiler.h>
 #include <c4alloc/c4alloc.h>
-#include <interfaces/filesystem.h>
+#include <c4rt/interface/filesystem.h>
 #include <stddef.h>
 
 // TODO: split all of this into their proper headers

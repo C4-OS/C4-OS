@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <nameserver/nameserver.h>
-#include <interfaces/block.h>
+#include <c4rt/interface/block.h>
 
 static ide_control_t ide_drives;
 

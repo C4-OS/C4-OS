@@ -1,5 +1,5 @@
 #include <c4alloc/c4alloc.h>
-#include <interfaces/pager.h>
+#include <c4rt/interface/pager.h>
 #include <c4rt/c4rt.h>
 #include <c4/paging.h>
 #include <stdint.h>

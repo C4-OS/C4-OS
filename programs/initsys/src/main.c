@@ -4,7 +4,7 @@
 #include <c4rt/stublibc.h>
 #include <c4rt/elf.h>
 #include <nameserver/nameserver.h>
-#include <interfaces/filesystem.h>
+#include <c4rt/interface/filesystem.h>
 //#include <interfaces/pager.h>
 //#include <c4/paging.h>
 #include <c4/thread.h>

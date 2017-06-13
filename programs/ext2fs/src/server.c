@@ -1,5 +1,5 @@
 #include <ext2fs/ext2fs.h>
-#include <interfaces/filesystem.h>
+#include <c4rt/interface/filesystem.h>
 #include <c4rt/ringbuffer.h>
 #include <c4rt/stublibc.h>
 #include <stdbool.h>

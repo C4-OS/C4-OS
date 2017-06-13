@@ -15,6 +15,7 @@ do_all: all
 
 ALL_TARGETS  += kernel sigma0 $(ALL_PROGRAMS)
 ALL_CLEAN    += kernel-clean
+ALL_INCLUDES  = $(patsubst -I%,%,$(KERNEL_INCLUDE) $(LIBRARY_INCLUDE) $(PROGRAM_INCLUDE))
 
 .PHONY: all
 all: $(ALL_TARGETS)
@@ -37,6 +38,12 @@ $(BUILD)/initfs: $(BUILD) $(INITFS_PROGRAMS)
 
 $(BUILD)/initfs.tar: $(BUILD)/initfs
 	cd $(BUILD)/initfs; tar c ./bin > $@
+
+$(BUILD)/include/usr/include: $(BUILD)
+	mkdir -p "$@"
+	for dir in $(ALL_INCLUDES); do \
+		cp -RT "$$dir" "$@"; \
+	done;
 
 $(BUILD)/test.img: kernel sigma0 $(INITSYS_PROGRAMS)
 	sudo $(TOOL_ROOT)/buildimg-$(ARCH) $@ \
@@ -61,6 +68,9 @@ sigma0: $(BUILD)/c4-$(ARCH)-sigma0
 initfs-clean:
 	rm -rf $(BUILD)/initfs
 	rm -f  $(BUILD)/initfs.tar
+
+.PHONY: sysincludes
+sysincludes: $(BUILD)/include/usr/include
 
 .PHONY: clean
 clean: $(ALL_CLEAN)

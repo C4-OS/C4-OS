@@ -1,4 +1,4 @@
-#include <interfaces/pager.h>
+#include <c4rt/interface/pager.h>
 #include <c4rt/elf.h>
 #include <c4rt/c4rt.h>
 #include <c4rt/stublibc.h>

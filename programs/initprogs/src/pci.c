@@ -1,6 +1,6 @@
 #include <c4rt/c4rt.h>
 #include <nameserver/nameserver.h>
-#include <interfaces/console.h>
+#include <c4rt/interface/console.h>
 #include <stdint.h>
 #include <stdbool.h>
 

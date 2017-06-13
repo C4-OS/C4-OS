@@ -4,8 +4,8 @@
 #include <miniforth/miniforth.h>
 #include <stdint.h>
 #include <nameserver/nameserver.h>
-#include <interfaces/console.h>
-#include <interfaces/keyboard.h>
+#include <c4rt/interface/console.h>
+#include <c4rt/interface/keyboard.h>
 
 static unsigned display = 0;
 static unsigned keyboard = 0;
@@ -78,8 +78,6 @@ static char *read_include_file( char *buf, unsigned n ){
 		cur_include = NULL;
 	}
 
-	c4_debug_printf( "--- forth: read \"%s\"\n", buf );
-
 	return buf;
 }
 
@@ -103,6 +101,7 @@ char minift_get_char( void ){
 		//ptr = input;
 		ptr =
 			" : pstring while dup c@ 0 != begin dup c@ emit 1 + repeat ; "
+			" \">> C4-OS version 0.0.1\" pstring cr "
 			" \">> Type 'loadlibs' to load the default libraries.\" pstring cr "
 			""
 			" : loadlibs "

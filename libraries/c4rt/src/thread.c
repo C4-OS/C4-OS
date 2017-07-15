@@ -38,7 +38,8 @@ int c4_set_pager( unsigned thread, unsigned pager ){
 }
 
 int c4_get_pager( void ){
-	return c4_info( SYSCALL_INFO_GET_PAGER );
+	//return c4_info( SYSCALL_INFO_GET_PAGER );
+	return 0;
 }
 
 int c4_get_id( void ){

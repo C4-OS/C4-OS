@@ -17,13 +17,10 @@ enum {
 
 static name_entry_t names[MAX_NAME_ENTRIES];
 
+// TODO: just replace `putchar` with c4_debug_putchar, no need for code
+//       duplication
 static void putchar( char c ){
-	message_t msg = {
-		.type = MESSAGE_TYPE_DEBUG_PUTCHAR,
-		.data = { c },
-	};
-
-	c4_msg_send( &msg, 0 );
+	c4_debug_putchar( c );
 }
 
 static void do_puts( const char *s ){

@@ -14,12 +14,17 @@ static unsigned strlen(const char *s){
 }
 
 void c4_debug_putchar( char c ){
+	/*
 	message_t msg = {
 		.type = MESSAGE_TYPE_DEBUG_PUTCHAR,
 		.data = { c },
 	};
+	*/
 
-	c4_msg_send( &msg, 0 );
+	//c4_msg_send( &msg, 0 );
+	int ret = 0;
+
+	DO_SYSCALL( SYSCALL_DEBUG_PUTCHAR, c, 0, 0, 0, ret );
 }
 
 void c4_debug_puts( const char *str ){

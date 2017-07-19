@@ -3,7 +3,7 @@
 void c4_exit( void ){
 	int unused = 0;
 
-	DO_SYSCALL( SYSCALL_EXIT, 0, 0, 0, 0, unused );
+	DO_SYSCALL( SYSCALL_THREAD_EXIT, 0, 0, 0, 0, unused );
 }
 
 int c4_info( unsigned action ){
@@ -17,7 +17,7 @@ int c4_info( unsigned action ){
 int c4_create_thread( void *entry, void *stack, unsigned flags ){
 	int ret = 0;
 
-	DO_SYSCALL( SYSCALL_CREATE_THREAD, entry, stack, flags, 0, ret );
+	DO_SYSCALL( SYSCALL_THREAD_CREATE, entry, stack, flags, 0, ret );
 
 	return ret;
 }

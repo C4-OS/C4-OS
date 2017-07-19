@@ -29,13 +29,13 @@ void _start( void *data ){
 
 	// XXX: kernel hangs if this recieve call isn't made before the send call,
 	//      will need to figure out what is causing that
-	DO_SYSCALL( SYSCALL_RECIEVE, &msg, 0, 0, 0, ret );
+	DO_SYSCALL( SYSCALL_SYNC_RECIEVE, &msg, 0, 0, 0, ret );
 
 	msg.data[0] = 'A';
 	msg.type = 0xabcd;
 
 	while ( true ){
 		for ( volatile unsigned k = 0; k < 10000000; k++ );
-		DO_SYSCALL( SYSCALL_SEND, &msg, display, 0, 0, ret );
+		DO_SYSCALL( SYSCALL_SYNC_SEND, &msg, display, 0, 0, ret );
 	}
 }

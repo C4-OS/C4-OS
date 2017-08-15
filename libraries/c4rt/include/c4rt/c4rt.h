@@ -19,6 +19,8 @@
 
 void c4_exit( void );
 
+int c4_msg_create_sync( void );
+int c4_msg_create_async( void );
 int c4_msg_send( message_t *buffer, unsigned target );
 int c4_msg_recieve( message_t *buffer, unsigned whom );
 int c4_msg_send_async( message_t *buffer, unsigned target );

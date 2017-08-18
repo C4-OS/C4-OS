@@ -23,23 +23,26 @@ int c4_create_thread( void *entry, void *stack, unsigned flags ){
 }
 
 int c4_continue_thread( unsigned thread ){
-	message_t buf = { .type = MESSAGE_TYPE_CONTINUE, };
+	int ret = 0;
+	DO_SYSCALL( SYSCALL_THREAD_CONTINUE, thread, 0, 0, 0, ret );
+	return ret;
+}
 
-	return c4_msg_send( &buf, thread );
+int c4_set_addrspace( unsigned thread, unsigned space ){
+	int ret = 0;
+	DO_SYSCALL( SYSCALL_THREAD_SET_ADDRSPACE, thread, space, 0, 0, ret );
+	return ret;
 }
 
 int c4_set_pager( unsigned thread, unsigned pager ){
-	message_t buf = {
-		.type = MESSAGE_TYPE_SET_PAGER,
-		.data = { pager },
-	};
-
-	return c4_msg_send( &buf, thread );
+	int ret = 0;
+	DO_SYSCALL( SYSCALL_THREAD_SET_PAGER, thread, pager, 0, 0, ret );
+	return ret;
 }
 
 int c4_get_pager( void ){
 	//return c4_info( SYSCALL_INFO_GET_PAGER );
-	return 0;
+	return -1;
 }
 
 int c4_get_id( void ){

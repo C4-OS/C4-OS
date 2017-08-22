@@ -34,6 +34,12 @@ int c4_set_addrspace( unsigned thread, unsigned space ){
 	return ret;
 }
 
+int c4_set_capspace( unsigned thread, unsigned space ){
+	int ret = 0;
+	DO_SYSCALL( SYSCALL_THREAD_SET_CAPSPACE, thread, space, 0, 0, ret );
+	return ret;
+}
+
 int c4_set_pager( unsigned thread, unsigned pager ){
 	int ret = 0;
 	DO_SYSCALL( SYSCALL_THREAD_SET_PAGER, thread, pager, 0, 0, ret );

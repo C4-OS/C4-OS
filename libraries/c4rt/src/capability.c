@@ -16,6 +16,16 @@ int c4_cspace_move( uint32_t src_space, uint32_t src_object,
 	return ret;
 }
 
+int c4_cspace_copy( uint32_t src_space, uint32_t src_object,
+                    uint32_t dest_space, uint32_t dest_object )
+{
+	int ret;
+	DO_SYSCALL( SYSCALL_CSPACE_CAP_COPY, src_space,
+	            src_object, dest_space, dest_object, ret );
+	return ret;
+}
+
+
 int c4_cspace_remove( uint32_t cspace, uint32_t object ){
 	int ret;
 	DO_SYSCALL( SYSCALL_CSPACE_CAP_REMOVE, cspace, object, 0, 0, ret );

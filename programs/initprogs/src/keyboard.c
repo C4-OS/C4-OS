@@ -104,7 +104,9 @@ void handle_get_event( message_t *request ){
 }
 
 void _start( uintptr_t nameserv ){
-	nameserver_bind( nameserv, "/dev/keyboard" );
+	int serv_port = c4_msg_create_sync();
+
+	nameserver_bind( nameserv, "/dev/keyboard", serv_port );
 
 	message_t msg = {
 		.type = MESSAGE_TYPE_INTERRUPT_SUBSCRIBE,
@@ -118,7 +120,8 @@ void _start( uintptr_t nameserv ){
 
 	while ( true ){
 		message_t msg;
-		c4_msg_recieve( &msg, 0 );
+		//c4_msg_recieve( &msg, 0 );
+		c4_msg_recieve( &msg, serv_port );
 
 		switch ( msg.type ){
 			case KEYBOARD_MSG_GET_EVENT:

@@ -71,6 +71,7 @@ static void send_info( message_t *msg, display_t *state ){
 void _start( uintptr_t nameserver ){
 	message_t msg;
 	display_t state;
+	int serv_port = c4_msg_create_sync();
 
 	if ( c4_bootinfo->framebuffer.exists ){
 		framebuffer_init( &state );
@@ -79,7 +80,7 @@ void _start( uintptr_t nameserver ){
 		textbuffer_init( &state );
 	}
 
-	nameserver_bind( nameserver, "/dev/console" );
+	nameserver_bind( nameserver, "/dev/console", serv_port );
 
 	while ( true ){
 		c4_msg_recieve( &msg, 0 );

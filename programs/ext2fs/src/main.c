@@ -120,11 +120,12 @@ void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
 }
 
 void _start( uintptr_t nameserver ){
-	unsigned disk = 0;
+	int disk = 0;
+	int serv_port = c4_msg_create_sync();
 
 	// TODO: find another way to handle this, this limits the number of
 	//       ext2 filesystems to one per nameserver
-	nameserver_bind( nameserver, "/dev/ext2fs" );
+	nameserver_bind( nameserver, "/dev/ext2fs", serv_port );
 	
 	while ( !disk ){
 		disk = nameserver_lookup( nameserver, "/dev/ata" );
@@ -228,7 +229,8 @@ void _start( uintptr_t nameserver ){
 	while ( true ){
 		message_t msg;
 
-		c4_msg_recieve( &msg, 0 );
+		//c4_msg_recieve( &msg, 0 );
+		c4_msg_recieve( &msg, serv_port );
 		ext2_handle_request( &ext2, &msg );
 	}
 

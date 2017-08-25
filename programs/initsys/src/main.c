@@ -150,7 +150,7 @@ void _start( uintptr_t nameserver ){
 
 	while ( true ){
 		message_t msg;
-		c4_msg_recieve( &msg, 0 );
+		c4_msg_recieve( &msg, 1 );
 	}
 
 	c4_exit();

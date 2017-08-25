@@ -40,14 +40,17 @@ void ide_pio_write( ide_device_t *device,
 void ata_handle_access( message_t *msg );
 
 void _start( uintptr_t nameserver ){
-	nameserver_bind( nameserver, "/dev/ata" );
+	int serv_port = c4_msg_create_sync();
+
+	nameserver_bind( nameserver, "/dev/ata", serv_port );
 	c4_debug_printf( "--- ata: hello, world! thread %u\n", c4_get_id());
 
 	ide_init();
 
 	while ( true ){
 		message_t msg;
-		c4_msg_recieve( &msg, 0 );
+		//c4_msg_recieve( &msg, nameserver );
+		c4_msg_recieve( &msg, serv_port );
 
 		if ( msg.type == BLOCK_MSG_READ || msg.type == BLOCK_MSG_WRITE ){
 			ata_handle_access( &msg );

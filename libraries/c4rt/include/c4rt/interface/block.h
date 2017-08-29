@@ -21,38 +21,36 @@ enum {
 	BLOCK_MSG_HAD_ERROR = true,
 };
 
-static inline bool block_access( unsigned id,
+static inline bool block_access( uint32_t id,
                                  message_t *msg,
-                                 void *page )
+                                 uint32_t page )
 {
+	c4_debug_printf( "--- thread %u: block: trying to access\n", c4_get_id());
+
 	bool error = BLOCK_MSG_NO_ERROR;
+	uint32_t temppoint = c4_send_temp_endpoint( id );
 
 	// send read request
-	c4_msg_send( msg, id );
-	// wait for the address where a read buffer should be mapped to
-	c4_msg_recieve( msg, id );
-	void *mapaddr = (void *)msg->data[0];
+	c4_msg_send( msg, temppoint );
+	c4_cspace_grant( page, temppoint, CAP_MODIFY | CAP_ACCESS | CAP_SHARE );
+	// wait for block device to process the request
+	c4_msg_recieve( msg, temppoint );
 
-	if ( msg->type != BLOCK_MSG_BUFFER ){
+	C4_ASSERT( msg->type == BLOCK_MSG_COMPLETED );
+	if ( msg->type != BLOCK_MSG_COMPLETED ){
 		error = BLOCK_MSG_HAD_ERROR;
 		goto done;
 	}
 
-	// map the buffer to the given address
-	c4_mem_map_to( id, page, mapaddr, 1, PAGE_WRITE | PAGE_READ );
-	// wait for the ata driver to finish and notify the sender
-	c4_msg_recieve( msg, id );
-	C4_ASSERT( msg->type == BLOCK_MSG_COMPLETED );
-
 done:
-	// finally unmap the buffer
-	c4_mem_unmap( id, mapaddr );
+	c4_cspace_remove( C4_CURRENT_CSPACE, temppoint );
 
 	return error;
 }
 
 static inline bool block_read( unsigned id,
-                               void *page,
+                               //void *page,
+                               uint32_t page,
                                unsigned drive,
                                unsigned location,
                                unsigned size )
@@ -66,7 +64,8 @@ static inline bool block_read( unsigned id,
 }
 
 static inline bool block_write( unsigned id,
-                                void *page,
+                                //void *page,
+                                uint32_t page,
                                 unsigned drive,
                                 unsigned location,
                                 unsigned size )

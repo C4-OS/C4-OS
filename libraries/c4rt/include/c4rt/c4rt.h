@@ -7,6 +7,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
+// capability addresses of default objects added to processes in the C4 runtime
+enum {
+	C4_CURRENT_CSPACE = 0,
+	C4_SERV_PORT = 1,
+	C4_NAMESERVER = 2,
+	C4_PAGER = 3,
+	C4_CURRENT_ADDRSPACE = 4,
+	C4_DEFAULT_OBJECT_END = 5,
+};
+
 // magic value which is passed by the elf loader to signal that it's using
 // the c4rt parameter convention
 #define C4RT_INIT_MAGIC 0x10adab1e
@@ -26,7 +36,8 @@ int c4_msg_create_async( void );
 int c4_msg_send( message_t *buffer, unsigned target );
 int c4_msg_recieve( message_t *buffer, unsigned whom );
 int c4_msg_send_async( message_t *buffer, unsigned target );
-int c4_msg_recieve_async( message_t *buffer, unsigned flags );
+int c4_msg_recieve_async( message_t *buffer, unsigned from, unsigned flags );
+int c4_send_temp_endpoint( uint32_t server );
 
 // thread functions
 int c4_create_thread( void *entry, void *stack, unsigned flags );
@@ -68,6 +79,9 @@ DEPRECATED void *c4_request_physical( uintptr_t virt,
                            unsigned permissions );
 
 DEPRECATED void  c4_dump_maps( unsigned thread );
+
+int c4_interrupt_subscribe( unsigned num, uint32_t endpoint );
+int c4_interrupt_unsubscribe( uint32_t endpoint );
 
 uint8_t  c4_in_byte( unsigned port );
 uint16_t c4_in_word( unsigned port );

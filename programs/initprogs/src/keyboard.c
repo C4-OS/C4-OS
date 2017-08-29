@@ -37,10 +37,12 @@ static inline bool is_modifier( char c ){
 	return c < CODE_END;
 }
 
+int interrupt_queue = -1;
+
 unsigned get_scancode( void ){
 	message_t msg;
 
-	c4_msg_recieve_async( &msg, MESSAGE_ASYNC_BLOCK );
+	c4_msg_recieve_async( &msg, interrupt_queue, MESSAGE_ASYNC_BLOCK );
 
 	return c4_in_byte( 0x60 );
 }
@@ -105,18 +107,22 @@ void handle_get_event( message_t *request ){
 
 void _start( uintptr_t nameserv ){
 	int serv_port = c4_msg_create_sync();
+	interrupt_queue = c4_msg_create_async();
 
 	nameserver_bind( nameserv, "/dev/keyboard", serv_port );
 
+	/*
 	message_t msg = {
 		.type = MESSAGE_TYPE_INTERRUPT_SUBSCRIBE,
 		.data = { INTERRUPT_KEYBOARD, },
 	};
+	*/
 
 	// read input port in case there was a keypress interrupt before
 	// the driver had a chance to handle it
 	c4_in_byte( 0x60 );
-	c4_msg_send( &msg, 0 );
+	c4_interrupt_subscribe( INTERRUPT_KEYBOARD, interrupt_queue );
+	//c4_msg_send( &msg, 0 );
 
 	while ( true ){
 		message_t msg;

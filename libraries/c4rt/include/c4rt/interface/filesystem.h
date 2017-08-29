@@ -2,6 +2,7 @@
 #define _C4OS_FILESYSTEM_INTERFACE_H 1
 #include <c4rt/c4rt.h>
 #include <c4rt/ringbuffer.h>
+#include <c4rt/interface/pager.h>
 #include <c4/message.h>
 #include <c4/paging.h>
 #include <stddef.h>
@@ -78,6 +79,8 @@ typedef struct fs_connection {
 	fs_node_t current_node;
 	unsigned  state;
 	unsigned  index;
+	int32_t   page_obj;
+	int32_t   temp_point;
 
 	union {
 		unsigned server;
@@ -114,14 +117,18 @@ static inline int fs_dirent_to_node( unsigned id,
 	return fs_get_node_info( id, dirent->inode, node );
 }
 
-static inline int fs_connect( unsigned id, void *page, fs_connection_t *conn ){
+//static inline int fs_connect( unsigned id, void *page, fs_connection_t *conn ){
+static inline int fs_connect( unsigned serv_endpoint, fs_connection_t *conn ){
+	conn->temp_point = c4_send_temp_endpoint( serv_endpoint );
+	C4_ASSERT( conn->temp_point > 0 );
+
 	message_t msg = {
 		.type = FS_MSG_CONNECT,
 		.data = { 0 },
 	};
 
-	c4_msg_send( &msg, id );
-	c4_msg_recieve( &msg, id );
+	c4_msg_send( &msg, conn->temp_point );
+	c4_msg_recieve( &msg, conn->temp_point );
 
 	if ( msg.type == FS_MSG_ERROR ){
 		return -msg.data[0];
@@ -129,12 +136,22 @@ static inline int fs_connect( unsigned id, void *page, fs_connection_t *conn ){
 
 	C4_ASSERT( msg.type == FS_MSG_BUFFER );
 
-	void *mapaddr = (void *)msg.data[0];
-	c4_ringbuf_init( page, PAGE_SIZE );
-	c4_mem_map_to( id, page, mapaddr, 1, PAGE_WRITE | PAGE_READ );
+	// TODO: dynamically allocate an address once a virtual memory manager is
+	//       implemented in the c4rt
+	conn->buffer = (void *)0xf11e0000;
+	conn->page_obj = pager_request_pages( C4_PAGER, 0xf11e0000,
+	                                      PAGE_READ | PAGE_WRITE, 1 );
+	C4_ASSERT( conn->page_obj > 0 );
+	c4_cspace_grant( conn->page_obj, conn->temp_point,
+	                 CAP_ACCESS | CAP_MODIFY | CAP_SHARE );
 
-	conn->buffer = page;
-	conn->server = id;
+	//void *mapaddr = (void *)msg.data[0];
+	//c4_ringbuf_init( page, PAGE_SIZE );
+	//c4_mem_map_to( id, page, mapaddr, 1, PAGE_WRITE | PAGE_READ );
+
+	//conn->buffer = page;
+	//conn->server = id;
+	conn->server = serv_endpoint;
 	conn->state  = FS_STATE_CONNECTED;
 
 	return 0;
@@ -147,7 +164,10 @@ static inline void fs_disconnect( fs_connection_t *conn ){
 	};
 
 	c4_msg_send( &msg, conn->server );
-	c4_mem_unmap( conn->server, conn->buffer );
+	//c4_mem_unmap( conn->server, conn->buffer );
+	c4_addrspace_unmap( C4_CURRENT_ADDRSPACE, (uintptr_t)conn->buffer );
+	c4_cspace_remove( C4_CURRENT_CSPACE, conn->page_obj );
+	c4_cspace_remove( C4_CURRENT_CSPACE, conn->server );
 
 	conn->state  = FS_STATE_DISCONNECTED;
 }
@@ -168,8 +188,10 @@ static inline int fs_restore_state( fs_connection_t *old_conn ){
 		return temp;
 	}
 
-	c4_msg_send( &msg, old_conn->server );
-	c4_msg_recieve( &msg, old_conn->server );
+	//c4_msg_send( &msg, old_conn->server );
+	//c4_msg_recieve( &msg, old_conn->server );
+	c4_msg_send( &msg, old_conn->temp_point );
+	c4_msg_recieve( &msg, old_conn->temp_point );
 
 	return msg.type == FS_MSG_ERROR? -msg.data[0] : 1;
 }
@@ -193,8 +215,8 @@ static inline int fs_find_name( fs_connection_t *conn,
 	};
 
 	c4_ringbuf_write( conn->buffer, name, namelen );
-	c4_msg_send( &msg, conn->server );
-	c4_msg_recieve( &msg, conn->server );
+	c4_msg_send( &msg, conn->temp_point );
+	c4_msg_recieve( &msg, conn->temp_point );
 
 	if ( msg.type == FS_MSG_ERROR ){
 		return -msg.data[0];
@@ -230,8 +252,8 @@ static inline int fs_set_node( fs_connection_t *conn, fs_node_t *node ){
 
 	conn->current_node = *node;
 
-	c4_msg_send( &msg, conn->server );
-	c4_msg_recieve( &msg, conn->server );
+	c4_msg_send( &msg, conn->temp_point );
+	c4_msg_recieve( &msg, conn->temp_point );
 
 	return msg.type == FS_MSG_ERROR? -msg.data[0] : 1;
 }
@@ -239,8 +261,8 @@ static inline int fs_set_node( fs_connection_t *conn, fs_node_t *node ){
 static inline int fs_list_dir( fs_connection_t *conn ){
 	message_t msg = { .type = FS_MSG_LIST_DIR, };
 
-	c4_msg_send( &msg, conn->server );
-	c4_msg_recieve( &msg, conn->server );
+	c4_msg_send( &msg, conn->temp_point );
+	c4_msg_recieve( &msg, conn->temp_point );
 
 	return msg.data[0];
 }
@@ -268,8 +290,8 @@ static inline int fs_read_block( fs_connection_t *conn,
 			.data = { 0, },
 		};
 
-		c4_msg_send( &msg, conn->server );
-		c4_msg_recieve( &msg, conn->server );
+		c4_msg_send( &msg, conn->temp_point );
+		c4_msg_recieve( &msg, conn->temp_point );
 
 		if ( msg.type == FS_MSG_ERROR ){
 			c4_debug_printf( "--- error: %u\n", msg.data[0] );
@@ -285,8 +307,7 @@ static inline int fs_read_block( fs_connection_t *conn,
 
 static inline void fs_set_connection_info( fs_connection_t *conn,
                                            fs_node_t *node,
-                                           unsigned server,
-                                           void *page )
+                                           unsigned server )
 {
     C4_ASSERT( conn );
     C4_ASSERT( conn->state == FS_STATE_DISCONNECTED );
@@ -310,7 +331,7 @@ static inline int fs_read_block_autoconn( fs_connection_t *conn,
 		};
 
 		if ( conn->state == FS_STATE_DISCONNECTED ){
-			fs_connect( conn->server, conn->buffer, conn );
+			fs_connect( conn->server, conn );
 			fs_restore_state( conn );
 			should_disconnect = true;
 		}

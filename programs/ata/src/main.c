@@ -37,12 +37,13 @@ void ide_pio_write( ide_device_t *device,
                     unsigned location,
                     unsigned sectors );
 
-void ata_handle_access( message_t *msg );
+void ata_handle_access( uint32_t endpoint, message_t *msg );
 
 void _start( uintptr_t nameserver ){
-	int serv_port = c4_msg_create_sync();
+	//int serv_port = c4_msg_create_sync();
 
-	nameserver_bind( nameserver, "/dev/ata", serv_port );
+	//nameserver_bind( nameserver, "/dev/ata", serv_port );
+	nameserver_bind( nameserver, "/dev/ata", C4_SERV_PORT );
 	c4_debug_printf( "--- ata: hello, world! thread %u\n", c4_get_id());
 
 	ide_init();
@@ -50,73 +51,95 @@ void _start( uintptr_t nameserver ){
 	while ( true ){
 		message_t msg;
 		//c4_msg_recieve( &msg, nameserver );
-		c4_msg_recieve( &msg, serv_port );
+		//c4_msg_recieve( &msg, serv_port );
+		c4_msg_recieve( &msg, C4_SERV_PORT );
+
+		if ( msg.type != MESSAGE_TYPE_GRANT_OBJECT ){
+			c4_debug_printf(
+				"--- ata: unknown request %u from %u\n",
+				msg.type, msg.sender );
+
+			continue;
+		}
+
+		uint32_t obj = msg.data[5];
+		c4_msg_recieve( &msg, obj );
 
 		if ( msg.type == BLOCK_MSG_READ || msg.type == BLOCK_MSG_WRITE ){
-			ata_handle_access( &msg );
+			ata_handle_access( obj, &msg );
 
 		} else {
 			c4_debug_printf(
 				"--- ata: unknown request %u from %u\n",
 				msg.type, msg.sender );
 		}
+
+		c4_cspace_remove( C4_CURRENT_CSPACE, obj );
 	}
 
 	c4_exit();
 }
 
-void ata_handle_access( message_t *request ){
-	message_t msg = {
-		.type = BLOCK_MSG_BUFFER,
-		.data = { 0xc0000000 },
-	};
-
+void ata_handle_access( uint32_t endpoint, message_t *request ){
 	ide_device_t *device = ide_device( request->data[0] );
 	unsigned location    = request->data[1];
 	unsigned sectors     = request->data[2];
+	message_t msg;
+	uint32_t bufobj;
+
+	c4_msg_recieve( &msg, endpoint );
+	C4_ASSERT( msg.type == MESSAGE_TYPE_GRANT_OBJECT );
+	bufobj = msg.data[5];
 
 	if ( !device->exists ){
 		msg = (message_t){ .type = BLOCK_MSG_ERROR };
-		c4_msg_send( &msg, request->sender );
-		return;
+		//c4_msg_send( &msg, request->sender );
+		//c4_msg_send( &msg, endpoint );
+		//return;
+		goto done;
 	}
 
-	c4_msg_send( &msg, request->sender );
-	c4_msg_recieve( &msg, request->sender );
-
-	C4_ASSERT( msg.type == MESSAGE_TYPE_MAP_TO );
-	C4_ASSERT( msg.data[0] == 0xc0000000 );
+	c4_addrspace_map( C4_CURRENT_ADDRSPACE, bufobj, 0xc0000000,
+	                  PAGE_READ | PAGE_WRITE );
 
 	if ( request->type == BLOCK_MSG_READ ){
 		ide_pio_read( device, (void *)0xc0000000, location, sectors );
 
 	} else {
 		c4_debug_printf( "--- ata: writing %u sectors for %u\n",
-				sectors, request->sender );
+				sectors, endpoint );
 
 		ide_pio_write( device, (void *)0xc0000000, location, sectors );
 	}
 
 	msg = (message_t){ .type = BLOCK_MSG_COMPLETED, };
 
-	c4_msg_send( &msg, request->sender );
-	c4_msg_recieve( &msg, request->sender );
-	C4_ASSERT( msg.type == MESSAGE_TYPE_UNMAP );
+done:
+	c4_addrspace_unmap( C4_CURRENT_ADDRSPACE, 0xc0000000 );
+	c4_msg_send( &msg, endpoint );
+	c4_cspace_remove( C4_CURRENT_CSPACE, endpoint );
+	// TODO: this won't be needed once proper single-use code is implemented
+	c4_cspace_remove( C4_CURRENT_CSPACE, bufobj );
+	//c4_msg_send( &msg, request->sender );
+	//c4_msg_recieve( &msg, request->sender );
+	//C4_ASSERT( msg.type == MESSAGE_TYPE_UNMAP );
 }
 
-static inline void interrupt_subscribe( unsigned intr ){
-	message_t msg = {
-		.type = MESSAGE_TYPE_INTERRUPT_SUBSCRIBE,
-		.data = { intr },
-	};
+static int interrupt_queue = -1;
 
-	c4_msg_send( &msg, 0 );
+static inline void interrupt_subscribe( unsigned intr ){
+	if ( interrupt_queue < 0 ){
+		interrupt_queue = c4_msg_create_async();
+	}
+
+	c4_interrupt_subscribe( intr, interrupt_queue );
 }
 
 static inline unsigned interrupt_wait( void ){
 	message_t msg;
 
-	c4_msg_recieve_async( &msg, MESSAGE_ASYNC_BLOCK );
+	//c4_msg_recieve_async( &msg, MESSAGE_ASYNC_BLOCK );
+	c4_msg_recieve_async( &msg, interrupt_queue, MESSAGE_ASYNC_BLOCK );
 
 	if ( msg.type != MESSAGE_TYPE_INTERRUPT ){
 		c4_debug_printf(
@@ -249,7 +272,8 @@ void ide_channel_poll( ide_channel_t *channel ){
 
 	// XXX: assume there was an interrupt message, and just ignore it if so
 	message_t msg;
-	c4_msg_recieve_async( &msg, 0 );
+	//c4_msg_recieve_async( &msg, 0 );
+	c4_msg_recieve_async( &msg, interrupt_queue, 0 );
 }
 
 static inline void ide_start_access( ide_device_t *device,

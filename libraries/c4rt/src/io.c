@@ -1,5 +1,21 @@
 #include <c4rt/c4rt.h>
 
+int c4_interrupt_subscribe( unsigned num, uint32_t endpoint ){
+	int ret;
+
+	DO_SYSCALL( SYSCALL_INTERRUPT_SUBSCRIBE, num, endpoint, 0, 0, ret );
+
+	return ret;
+}
+
+int c4_interrupt_unsubscribe( uint32_t endpoint ){
+	int ret;
+
+	DO_SYSCALL( SYSCALL_INTERRUPT_SUBSCRIBE, endpoint, 0, 0, 0, ret );
+
+	return ret;
+}
+
 uint8_t c4_in_byte( unsigned port ){
 	int ret;
 

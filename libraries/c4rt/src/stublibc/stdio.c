@@ -59,6 +59,7 @@ FILE *fopen( const char *path, const char *mode ){
 	fs_node_t temp = (*path == '/')? path++, root_dir : current_dir;
 	fs_connection_t conn = {};
 
+	//fs_connect( root_server, fs_buffer, &conn );
 	fs_connect( root_server, fs_buffer, &conn );
 
 	for ( int found = 1; found > 0; ){
@@ -75,7 +76,7 @@ FILE *fopen( const char *path, const char *mode ){
 			ret->mode    = translate_modeflags( mode );
 			ret->conn    = (fs_connection_t){ };
 
-			fs_set_connection_info( &ret->conn, &temp, conn.server, fs_buffer );
+			fs_set_connection_info( &ret->conn, &temp, conn.server );
 			break;
 		}
 

@@ -27,7 +27,7 @@ copy_files () {
 
 linux_init_image () {
 	if [ $EXISTS = 1 ]; then
-		echo -e "n\np\n\n2048\n+16M\na\nw\nq\n" | fdisk $IMAGE > /dev/null
+		echo "n\np\n\n2048\n+16M\na\nw\nq\n" | fdisk $IMAGE > /dev/null
 	fi
 
 	losetup -o$(( 2048 * 512 )) /dev/loop0 $IMAGE

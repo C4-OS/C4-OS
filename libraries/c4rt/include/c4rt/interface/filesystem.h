@@ -5,6 +5,7 @@
 #include <c4rt/interface/pager.h>
 #include <c4/message.h>
 #include <c4/paging.h>
+#include <c4rt/mem.h>
 #include <stddef.h>
 
 enum {
@@ -76,10 +77,11 @@ typedef struct fs_dirent {
 
 typedef struct fs_connection {
 	c4_ringbuf_t *buffer;
+	c4_mem_object_t *bufobj;
 	fs_node_t current_node;
 	unsigned  state;
 	unsigned  index;
-	int32_t   page_obj;
+	//int32_t   page_obj;
 	int32_t   temp_point;
 
 	union {
@@ -118,7 +120,7 @@ static inline int fs_dirent_to_node( unsigned id,
 }
 
 //static inline int fs_connect( unsigned id, void *page, fs_connection_t *conn ){
-static inline int fs_connect( unsigned serv_endpoint, fs_connection_t *conn ){
+static inline int fs_connect( unsigned serv_endpoint, fs_connection_t *conn, c4_mem_object_t *buf ){
 	conn->temp_point = c4_send_temp_endpoint( serv_endpoint );
 	C4_ASSERT( conn->temp_point > 0 );
 
@@ -136,14 +138,32 @@ static inline int fs_connect( unsigned serv_endpoint, fs_connection_t *conn ){
 
 	C4_ASSERT( msg.type == FS_MSG_BUFFER );
 
+	conn->buffer = buf->vaddrptr;
+	conn->bufobj = buf;
+
+	c4_memobj_map( buf, C4_CURRENT_ADDRSPACE );
+	c4_memobj_share( buf, serv_endpoint );
+
 	// TODO: dynamically allocate an address once a virtual memory manager is
 	//       implemented in the c4rt
+	/*
+	int32_t pageobj = pager_request_pages( C4_PAGER, 0xf11e0000,
+	                                       PAGE_READ | PAGE_WRITE, 1 );
+	C4_ASSERT( pageobj > 0 );
+
 	conn->buffer = (void *)0xf11e0000;
-	conn->page_obj = pager_request_pages( C4_PAGER, 0xf11e0000,
-	                                      PAGE_READ | PAGE_WRITE, 1 );
-	C4_ASSERT( conn->page_obj > 0 );
+	conn->bufobj = c4_memobj_make( pageobj, (uintptr_t)0xf11e0000,
+	                               PAGE_READ | PAGE_WRITE );
+	c4_memobj_share( &conn->bufobj, serv_endpoint );
+
+	//conn->page_obj = pager_request_pages( C4_PAGER, 0xf11e0000,
+	//C4_ASSERT( conn->page_obj > 0 );
+	*/
+
+	/*
 	c4_cspace_grant( conn->page_obj, conn->temp_point,
 	                 CAP_ACCESS | CAP_MODIFY | CAP_SHARE );
+					 */
 
 	//void *mapaddr = (void *)msg.data[0];
 	//c4_ringbuf_init( page, PAGE_SIZE );
@@ -164,9 +184,11 @@ static inline void fs_disconnect( fs_connection_t *conn ){
 	};
 
 	c4_msg_send( &msg, conn->server );
+
 	//c4_mem_unmap( conn->server, conn->buffer );
-	c4_addrspace_unmap( C4_CURRENT_ADDRSPACE, (uintptr_t)conn->buffer );
-	c4_cspace_remove( C4_CURRENT_CSPACE, conn->page_obj );
+	//c4_addrspace_unmap( C4_CURRENT_ADDRSPACE, (uintptr_t)conn->buffer );
+	//c4_cspace_remove( C4_CURRENT_CSPACE, conn->page_obj );
+
 	c4_cspace_remove( C4_CURRENT_CSPACE, conn->server );
 
 	conn->state  = FS_STATE_DISCONNECTED;
@@ -312,10 +334,10 @@ static inline void fs_set_connection_info( fs_connection_t *conn,
     C4_ASSERT( conn );
     C4_ASSERT( conn->state == FS_STATE_DISCONNECTED );
 
-    c4_ringbuf_init( page, PAGE_SIZE );
+    c4_ringbuf_init( conn->bufobj->vaddrptr, PAGE_SIZE );
 
     conn->server       = server;
-    conn->buffer       = page;
+    //conn->buffer       = page;
     conn->current_node = *node;
 }
 
@@ -331,7 +353,7 @@ static inline int fs_read_block_autoconn( fs_connection_t *conn,
 		};
 
 		if ( conn->state == FS_STATE_DISCONNECTED ){
-			fs_connect( conn->server, conn );
+			fs_connect( conn->server, conn, conn->bufobj );
 			fs_restore_state( conn );
 			should_disconnect = true;
 		}

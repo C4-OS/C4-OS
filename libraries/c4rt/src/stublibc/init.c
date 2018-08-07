@@ -1,6 +1,7 @@
 #include <c4rt/c4rt.h>
 #include <c4rt/stublibc.h>
 #include <c4rt/compiler.h>
+#include <c4rt/addrman.h>
 #include <c4alloc/c4alloc.h>
 
 // having a global variable here is ok, because 'env' in _start
@@ -8,6 +9,7 @@
 static char **global_env = NULL;
 static unsigned global_nameserv = 0;
 static c4a_heap_t global_heap;
+static c4rt_vaddr_region_t *global_region;
 
 WEAK char *getenv( const char *name ){
 	if ( !global_env )
@@ -54,7 +56,9 @@ WEAK int main( int argc, char **argv, char **envp ){
 WEAK void _start( unsigned nameserv, char **args, char **env, unsigned magic ){
 	extern int main( int argc, char **argv, char **envp );
 
-	c4a_heap_init( &global_heap, 0xe0000000 );
+	c4a_heap_init(&global_heap, 0xe0000000);
+	// 256MB region for general-purpose memory maps
+	global_region   = c4rt_vaddr_region_create(0xc0000000, 0x10000);
 	global_nameserv = nameserv;
 
 	if ( magic == C4RT_INIT_MAGIC ){

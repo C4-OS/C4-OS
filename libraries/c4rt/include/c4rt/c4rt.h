@@ -43,7 +43,7 @@ int c4_send_temp_endpoint( uint32_t server );
 int c4_create_thread( void *entry, void *stack, unsigned flags );
 int c4_continue_thread( unsigned thread );
 int c4_set_pager( unsigned thread, unsigned pager );
-int c4_get_pager( void );
+DEPRECATED int c4_get_pager( void );
 int c4_get_id( void );
 int c4_set_addrspace( unsigned thread, unsigned space );
 int c4_set_capspace( unsigned thread, unsigned space );

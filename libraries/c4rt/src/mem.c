@@ -82,6 +82,21 @@ bool c4_memobj_region_unmap(c4_mem_object_t *memobj){
 	return true;
 }
 
+bool c4_memobj_alloc(c4_mem_object_t *memobj,
+                     size_t size,
+                     unsigned permissions)
+{
+	int n_pages = pager_size_to_pages(size);
+	int32_t page = pager_request_pages(C4_PAGER, permissions, n_pages);
+
+	return c4_memobj_region_map(page, memobj, size, permissions);
+}
+
+void c4_memobj_free(c4_mem_object_t *memobj){
+	c4_memobj_region_unmap(memobj);
+	c4_memobj_destroy(memobj);
+}
+
 void c4_memobj_destroy( c4_mem_object_t *obj ){
 	c4_cspace_remove( C4_CURRENT_CSPACE, obj->page_obj );
 }

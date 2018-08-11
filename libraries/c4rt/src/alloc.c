@@ -73,13 +73,8 @@ static inline void c4a_grow( c4a_heap_t *heap ){
 	for ( ; temp < end; temp += pages * PAGE_SIZE ){
 		c4a_node_t *node = (void *)temp;
 
-		/*
-		pager_request_pages( c4_get_pager(), temp,
-		                     PAGE_READ | PAGE_WRITE, pages );
-							 */
-
-		pager_request_pages( C4_PAGER, temp,
-		                     PAGE_READ | PAGE_WRITE, pages );
+		pager_request_pages_map( C4_PAGER, temp,
+		                         PAGE_READ | PAGE_WRITE, pages );
 
 		node->status = C4A_STATUS_FREE;
 		node->bucket = index;

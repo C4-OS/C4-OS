@@ -38,6 +38,10 @@ WEAK c4a_heap_t *getc4heap( void ){
 	return &global_heap;
 }
 
+WEAK c4rt_vaddr_region_t *get_genregion(void){
+	return global_region;
+}
+
 WEAK int main( int argc, char **argv, char **envp ){
 	unsigned id = c4_get_id();
 

@@ -1,5 +1,6 @@
 #include <c4rt/c4rt.h>
 #include <c4rt/mem.h>
+#include <c4rt/addrman.h>
 #include <c4/error.h>
 
 c4_mem_object_t c4_memobj_make( uint32_t obj,
@@ -37,6 +38,48 @@ bool c4_memobj_unmap( c4_mem_object_t *obj, uint32_t addrspace ){
 
 	obj->mapped = false;
 	return obj->mapped;
+}
+
+// TODO: documentation
+//       This takes a page capability and maps it into an available space
+//       in the general-purpose region, then wraps all the info in a
+//       c4_mem_object_t and maps it into the current address space.
+//       In other words, wrapping some common operations up into a streamlined
+//       interface.
+//
+//       returns true if the page was successfully mapped, false otherwise.
+bool c4_memobj_region_map( uint32_t obj,
+                           c4_mem_object_t *memobj,
+                           size_t size,
+                           unsigned permissions )
+{
+	if (!get_genregion()) {
+		// general-purpose region wasn't initialized for whatever reason,
+		// we can't continue
+		return false;
+	}
+
+	void *ptr = c4rt_vaddr_alloc(get_genregion(), size);
+
+	if (!ptr) {
+		return false;
+	}
+
+	*memobj = c4_memobj_make(obj, (uintptr_t)ptr, permissions);
+	return c4_memobj_map(memobj, C4_CURRENT_ADDRSPACE);
+}
+
+bool c4_memobj_region_unmap(c4_mem_object_t *memobj){
+	if (!get_genregion()) {
+		// general-purpose region wasn't initialized for whatever reason,
+		// we can't continue
+		return false;
+	}
+
+	c4_memobj_unmap(memobj, C4_CURRENT_ADDRSPACE);
+	c4rt_vaddr_free(get_genregion(), (void*)memobj->vaddr);
+
+	return true;
 }
 
 void c4_memobj_destroy( c4_mem_object_t *obj ){

@@ -1,6 +1,7 @@
 #ifndef _C4RT_STUB_LIBC_H
 #define _C4RT_STUB_LIBC_H 1
 #include <c4rt/compiler.h>
+#include <c4rt/addrman.h>
 #include <c4alloc/c4alloc.h>
 #include <c4rt/interface/filesystem.h>
 #include <stddef.h>
@@ -83,6 +84,7 @@ char *getenv( const char *name );
 // non-C functions
 unsigned getnameserv( void );
 c4a_heap_t *getc4heap( void );
+c4rt_vaddr_region_t *get_genregion(void);
 
 
 #endif

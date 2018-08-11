@@ -27,6 +27,12 @@ static inline unsigned c4_page_to_cap_perms( unsigned page_perms ){
 c4_mem_object_t c4_memobj_make( uint32_t obj, uintptr_t vaddr, unsigned permissions );
 bool c4_memobj_map( c4_mem_object_t *obj, uint32_t addrspace );
 bool c4_memobj_unmap( c4_mem_object_t *obj, uint32_t addrspace );
+bool c4_memobj_region_map( uint32_t obj,
+                           c4_mem_object_t *memobj,
+                           size_t size,
+                           unsigned permissions );
+bool c4_memobj_region_unmap(c4_mem_object_t *memobj);
+
 //bool            c4_memobj_map( c4_mem_object_t *obj );
 //bool            c4_memobj_unmap( c4_mem_object_t *obj );
 void            c4_memobj_destroy( c4_mem_object_t *obj );

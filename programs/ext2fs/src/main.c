@@ -2,6 +2,7 @@
 #include <c4rt/interface/block.h>
 #include <nameserver/nameserver.h>
 #include <c4rt/c4rt.h>
+#include <c4rt/mem.h>
 #include <c4/paging.h>
 
 #include <stdint.h>
@@ -18,15 +19,19 @@
 //      should be no worry about accidentally overwriting previously retrieved
 //      data, but please be mindful of it if you happen to be modifying
 //      the code.
-static uint8_t disk_buffer[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
+//static uint8_t disk_buffer[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
+static c4_mem_object_t block_buffer;
 
 ext2_superblock_t *ext2_get_superblock( unsigned device, unsigned drive ){
+	void *disk_buffer = (void *)block_buffer.vaddr;
 	bool error = block_read( device, disk_buffer, drive, 2050, 2 );
 
 	return error? NULL : (void *)disk_buffer;
 }
 
 void *ext2_read_block( ext2fs_t *fs, unsigned block ){
+	void *disk_buffer = (void *)block_buffer.vaddr;
+
 	if ( block > ext2_max_block(fs) ){
 		DEBUGF( "have request for block not in filesystem, %u\n", block );
 		return NULL;
@@ -119,9 +124,14 @@ void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
 	return NULL;
 }
 
-void _start( uintptr_t nameserver ){
+//void _start( uintptr_t nameserver ){
+int main(int argc, char *argv[]) {
 	int disk = 0;
 	int serv_port = c4_msg_create_sync();
+	int nameserver = getnameserv();
+
+	C4_ASSERT(c4_memobj_alloc(&block_buffer, PAGE_SIZE, PAGE_READ|PAGE_WRITE));
+	DEBUGF("have block buffer at %p\n", block_buffer.vaddr);
 
 	// TODO: find another way to handle this, this limits the number of
 	//       ext2 filesystems to one per nameserver
@@ -234,5 +244,6 @@ void _start( uintptr_t nameserver ){
 		ext2_handle_request( &ext2, &msg );
 	}
 
-	c4_exit();
+	return 0;
+	//c4_exit();
 }

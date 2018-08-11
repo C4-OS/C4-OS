@@ -35,12 +35,21 @@ Elf32_Sym  *elf_get_sym_byname( Elf32_Ehdr *, char *, char * );
 // XXX: currently assumes that the returned page(s) will be mapped away
 //      before the next call to allot_pages()
 static inline void *allot_pages( unsigned pages ){
-	void *ret = (void *)0xd0000000;
+	//void *ret = (void *)0xd0000000;
+	void *ret = (void *)0xf0000000;
 
+	/*
 	ret = pager_request_pages( c4_get_pager(),
 	                           (uintptr_t)ret,
 	                           PAGE_READ | PAGE_WRITE,
 	                           pages );
+	 */
+
+	// TODO: make sure this actually works, not tested!
+	ret = pager_request_pages_map( c4_get_pager(),
+	                               (uintptr_t)ret,
+	                               PAGE_READ | PAGE_WRITE,
+	                               pages );
 
 	return ret;
 }

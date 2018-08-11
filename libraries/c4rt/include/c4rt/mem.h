@@ -24,6 +24,11 @@ static inline unsigned c4_page_to_cap_perms( unsigned page_perms ){
 	return ret;
 }
 
+// these functions are intended to be the general high-level memory management
+// interfaces when you don't particularly care what address the memory is at
+bool c4_memobj_alloc(c4_mem_object_t *memobj, size_t size, unsigned permissions);
+void c4_memobj_free(c4_mem_object_t *memobj);
+
 c4_mem_object_t c4_memobj_make( uint32_t obj, uintptr_t vaddr, unsigned permissions );
 bool c4_memobj_map( c4_mem_object_t *obj, uint32_t addrspace );
 bool c4_memobj_unmap( c4_mem_object_t *obj, uint32_t addrspace );

@@ -23,14 +23,15 @@
 static c4_mem_object_t block_buffer;
 
 ext2_superblock_t *ext2_get_superblock( unsigned device, unsigned drive ){
-	void *disk_buffer = (void *)block_buffer.vaddr;
-	bool error = block_read( device, disk_buffer, drive, 2050, 2 );
+	void *buffer = (void *)block_buffer.vaddr;
+	//bool error = block_read( device, disk_buffer, drive, 2050, 2 );
+	bool error = block_read( device, &block_buffer, drive, 2050, 2 );
 
-	return error? NULL : (void *)disk_buffer;
+	return error? NULL : (void *)buffer;
 }
 
 void *ext2_read_block( ext2fs_t *fs, unsigned block ){
-	void *disk_buffer = (void *)block_buffer.vaddr;
+	void *buffer = (void *)block_buffer.vaddr;
 
 	if ( block > ext2_max_block(fs) ){
 		DEBUGF( "have request for block not in filesystem, %u\n", block );
@@ -39,9 +40,9 @@ void *ext2_read_block( ext2fs_t *fs, unsigned block ){
 
 	unsigned sector = ext2_block_to_sector( fs, block );
 	unsigned size   = ext2_block_size_to_sectors( fs );
-	bool error = block_read( fs->block_device, disk_buffer, 0, sector, size );
+	bool error = block_read(fs->block_device, &block_buffer, 0, sector, size);
 
-	return error? NULL : (void *)disk_buffer;
+	return error? NULL : (void *)buffer;
 }
 
 ext2_block_group_desc_t *ext2_get_block_descs( ext2fs_t *ext2 ){

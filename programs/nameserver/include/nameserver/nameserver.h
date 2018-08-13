@@ -8,6 +8,7 @@ enum {
 	NAME_UNBIND,
 	NAME_LOOKUP,
 	NAME_RESULT,
+	NAME_LOOKUP_FAILED,
 };
 
 static inline unsigned nameserver_hash( const char *str ){
@@ -57,18 +58,19 @@ static inline unsigned nameserver_lookup( unsigned server, const char *name ){
 		.data = { nameserver_hash(name) },
 	};
 
-	c4_debug_printf( "--- thread %u: sending...\n", c4_get_id() );
 	c4_msg_send( &msg, responseq );
-	c4_debug_printf( "--- thread %u: sent\n", c4_get_id() );
-	c4_debug_printf( "--- thread %u: recieving...\n", c4_get_id() );
 	c4_msg_recieve( &msg, responseq );
-	c4_debug_printf( "--- thread %u: recieved\n", c4_get_id() );
-	c4_cspace_remove( 0, responseq );
-	//c4_msg_recieve( &msg, server );
+	c4_cspace_remove(C4_CURRENT_CSPACE, responseq);
 	C4_ASSERT( msg.type == MESSAGE_TYPE_GRANT_OBJECT );
-	c4_debug_printf( "--- thread %u: got %u\n", c4_get_id(), msg.data[5] );
 
-	return msg.data[5];
+	if (msg.type == MESSAGE_TYPE_GRANT_OBJECT){
+		c4_debug_printf( "--- thread %u: got %u\n", c4_get_id(), msg.data[5] );
+		return msg.data[5];
+	}
+
+	else {
+		return 0;
+	}
 }
 
 #endif

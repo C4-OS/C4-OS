@@ -1,9 +1,11 @@
-#include <ext2fs/ext2fs.h>
-#include <c4rt/interface/block.h>
-#include <nameserver/nameserver.h>
-#include <c4rt/c4rt.h>
-#include <c4rt/mem.h>
 #include <c4/paging.h>
+#include <c4rt/c4rt.h>
+#include <c4rt/connman.h>
+#include <c4rt/mem.h>
+#include <c4rt/interface/block.h>
+
+#include <nameserver/nameserver.h>
+#include <ext2fs/ext2fs.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -237,13 +239,8 @@ int main(int argc, char *argv[]) {
 		foo = (void *)(dirents + i);
 	}
 
-	while ( true ){
-		message_t msg;
-
-		//c4_msg_recieve( &msg, 0 );
-		c4_msg_recieve( &msg, serv_port );
-		ext2_handle_request( &ext2, &msg );
-	}
+	c4rt_connman_server_init(&ext2.server, serv_port);
+	ext2_server(&ext2);
 
 	return 0;
 	//c4_exit();

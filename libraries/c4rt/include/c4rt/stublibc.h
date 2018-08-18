@@ -40,12 +40,12 @@ void realloc( void *ptr, size_t size );
 // file functions
 typedef struct c_filestruct {
 	fs_connection_t conn;
-	unsigned  server;
-	unsigned  status;
+	//unsigned  server;
 	fs_node_t node;
+
+	unsigned  status;
 	int       charbuf;
 	char      mode;
-
 	bool      have_char;
 	bool      used;
 	// TODO: do we need read/write offsets here?

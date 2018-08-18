@@ -6,47 +6,91 @@
 
 // TODO: move these into per-thread datastructures once worker threads are
 //       implemented
+/*
 static fs_connection_t connection;
 static ext2_inode_t    current_inode;
+*/
 
+/*
 static void handle_connect( ext2fs_t *fs, message_t *request );
 static void handle_disconnect( ext2fs_t *fs, message_t *request );
 static void handle_restore_state( ext2fs_t *fs, message_t *request );
-static void handle_set_node( ext2fs_t *fs, message_t *request );
-static void handle_list_dir( ext2fs_t *fs, message_t *request );
-static void handle_find_name( ext2fs_t *fs, message_t *request );
-static void handle_get_rootdir( ext2fs_t *fs, message_t *request );
-static void handle_get_node_info( ext2fs_t *fs, message_t *request );
-static void handle_read_block( ext2fs_t *fs, message_t *request );
+*/
 
-void ext2_handle_request( ext2fs_t *fs, message_t *request ){
-	switch ( request->type ){
-		case FS_MSG_CONNECT:       handle_connect( fs, request );       break;
-		case FS_MSG_DISCONNECT:    handle_disconnect( fs, request );    break;
-		case FS_MSG_RESTORE_STATE: handle_restore_state( fs, request ); break;
-		case FS_MSG_SET_NODE:      handle_set_node( fs, request );      break;
-		case FS_MSG_FIND_NAME:     handle_find_name( fs, request );     break;
-		case FS_MSG_GET_ROOT_DIR:  handle_get_rootdir( fs, request );   break;
-		case FS_MSG_GET_NODE_INFO: handle_get_node_info( fs, request ); break;
-		case FS_MSG_LIST_DIR:      handle_list_dir( fs, request );      break;
-		case FS_MSG_READ_BLOCK:    handle_read_block( fs, request );    break;
-		default: break;
+typedef struct {
+	fs_node_t    fsnode;
+	ext2_inode_t e2node;
+	unsigned     index;
+} client_state_t;
+
+static void handle_set_node(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_list_dir(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_find_name(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_get_rootdir(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_get_node_info(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_read_block(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+
+void ext2_server(ext2fs_t *fs) {
+	while (true) {
+		message_t request;
+		c4rt_conn_t *conn;
+
+		conn = c4rt_connman_server_listen(&fs->server, &request);
+
+		switch (request.type) {
+			/*
+			   case FS_MSG_CONNECT:       handle_connect(fs, &request);       break;
+			   case FS_MSG_DISCONNECT:    handle_disconnect(fs, &request);    break;
+			   case FS_MSG_RESTORE_STATE: handle_restore_state(fs, &request); break;
+			   */
+
+			case FS_MSG_SET_NODE:
+				handle_set_node(fs, conn, &request);
+				break;
+
+			case FS_MSG_FIND_NAME:
+				handle_find_name(fs, conn, &request);
+				break;
+
+			case FS_MSG_GET_ROOT_DIR:
+				handle_get_rootdir(fs, conn, &request);
+				break;
+
+			case FS_MSG_GET_NODE_INFO:
+				handle_get_node_info(fs, conn, &request);
+				break;
+
+			case FS_MSG_LIST_DIR:
+				handle_list_dir(fs, conn, &request);
+				break;
+
+			case FS_MSG_READ_BLOCK:
+				handle_read_block(fs, conn, &request);
+				break;
+
+			default:
+				break;
+
+		}
 	}
 }
 
-static inline void send_error( message_t *request, unsigned error ){
+static inline void send_error( c4rt_conn_t *conn, unsigned error ){
 	message_t msg = {
 		.type = FS_MSG_ERROR,
 		.data = { error },
 	};
 
-	c4_msg_send( &msg, request->sender );
+	//c4_msg_send( &msg, request->sender );
+	c4rt_connman_server_respond(conn, &msg);
 }
 
+/*
 static inline bool is_connected( message_t *request ){
 	return connection.state == FS_STATE_CONNECTED
 	    && connection.client == request->sender;
 }
+*/
 
 static inline void copy_name( fs_dirent_t *fs_ent, ext2_dirent_t *ext_ent ){
 	unsigned k = 0;
@@ -67,6 +111,7 @@ static inline unsigned translate_type( unsigned ext_type ){
 	}
 }
 
+/*
 static void handle_connect( ext2fs_t *fs, message_t *request ){
 	if ( connection.state != FS_STATE_DISCONNECTED ){
 		send_error( request, FS_ERROR_SERVER_BUSY );
@@ -103,7 +148,9 @@ static void handle_disconnect( ext2fs_t *fs, message_t *request ){
 	c4_msg_recieve( &msg, connection.client );
 	C4_ASSERT( msg.type == MESSAGE_TYPE_UNMAP );
 }
+*/
 
+/*
 static void handle_restore_state( ext2fs_t *fs, message_t *request ){
 	if ( !is_connected( request )){
 		send_error( request, FS_ERROR_NOT_CONNECTED );
@@ -116,25 +163,29 @@ static void handle_restore_state( ext2fs_t *fs, message_t *request ){
 	message_t msg = { .type = FS_MSG_COMPLETED, };
 	c4_msg_send( &msg, request->sender );
 }
+*/
 
-static void handle_set_node( ext2fs_t *fs, message_t *request ){
-	if ( request->sender != connection.client ){
-		send_error( request, FS_ERROR_NOT_CONNECTED );
-		return;
+static
+void handle_set_node( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
+	if (!conn->prog_data) {
+		conn->prog_data = calloc(1, sizeof(client_state_t));
 	}
 
-	connection.current_node = (fs_node_t){
+	client_state_t *cli = conn->prog_data;
+
+	cli->fsnode = (fs_node_t){
 		.inode = request->data[0],
 		.type  = FILE_TYPE_UNKNOWN,
 		.size  = 0,
 	};
 
-	connection.index = 0;
+	cli->index = 0;
 
-	ext2_get_inode( fs, &current_inode, request->data[0] );
+	ext2_get_inode(fs, &cli->e2node, request->data[0]);
 
 	message_t msg = { .type = FS_MSG_COMPLETED, };
-	c4_msg_send( &msg, request->sender );
+	c4rt_connman_server_respond(conn, &msg);
+	//c4_msg_send( &msg, request->sender );
 }
 
 static inline bool name_matches( ext2_dirent_t *dir, char *name, size_t len ){
@@ -150,35 +201,41 @@ static inline bool name_matches( ext2_dirent_t *dir, char *name, size_t len ){
 	return true;
 }
 
-static void handle_find_name( ext2fs_t *fs, message_t *request ){
+static
+void handle_find_name( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	char name[FS_MAX_NAME_LEN];
 	size_t namelen = request->data[0];
+	client_state_t *cli = NULL;
 
 	// request validation
-	if ( !is_connected( request )){
-		send_error( request, FS_ERROR_NOT_CONNECTED );
+	if (!conn->prog_data) {
+		// client hasn't set a node, can't continue
+		send_error(conn, FS_ERROR_BAD_REQUEST);
+
+	} else {
+		cli = conn->prog_data;
+	}
+
+	if (!ext2_is_directory(&cli->e2node)) {
+		//send_error( request, FS_ERROR_NOT_DIRECTORY );
+		send_error(conn, FS_ERROR_NOT_DIRECTORY);
 		return;
 	}
 
-	if ( !ext2_is_directory( &current_inode )){
-		send_error( request, FS_ERROR_NOT_DIRECTORY );
-		return;
-	}
-
-	if ( !c4_ringbuf_can_read( connection.buffer, namelen )
+	if (!c4_ringbuf_can_read(conn->ringbuf, namelen)
 	  || namelen >= FS_MAX_NAME_LEN )
 	{
-		send_error( request, FS_ERROR_BAD_REQUEST );
+		send_error(conn, FS_ERROR_BAD_REQUEST);
 		return;
 	}
 
-	c4_ringbuf_read( connection.buffer, name, namelen );
+	c4_ringbuf_read(conn->ringbuf, name, namelen);
 
 	for ( size_t block = 0;
-	      block * ext2_block_size(fs) < current_inode.lower_size;
+	      block * ext2_block_size(fs) < cli->e2node.lower_size;
 	      block++ )
 	{
-		uint8_t *dirbuf = ext2_inode_read_block( fs, &current_inode, block );
+		uint8_t *dirbuf = ext2_inode_read_block(fs, &cli->e2node, block);
 		ext2_dirent_t *dirent = (void *)dirbuf;
 
 		for ( unsigned i = 0; i < ext2_block_size(fs); ){
@@ -192,7 +249,8 @@ static void handle_find_name( ext2fs_t *fs, message_t *request ){
 					}
 				};
 
-				c4_msg_send( &msg, request->sender );
+				c4rt_connman_server_respond(conn, &msg);
+				//c4_msg_send( &msg, request->sender );
 				return;
 			}
 
@@ -201,10 +259,12 @@ static void handle_find_name( ext2fs_t *fs, message_t *request ){
 		}
 	}
 
-	send_error( request, FS_ERROR_NOT_FOUND );
+	//send_error( request, FS_ERROR_NOT_FOUND );
+	send_error(conn, FS_ERROR_NOT_FOUND);
 }
 
-static void handle_get_rootdir( ext2fs_t *fs, message_t *request ){
+static
+void handle_get_rootdir( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	ext2_inode_t inode;
 
 	ext2_get_inode( fs, &inode, 2 );
@@ -218,14 +278,17 @@ static void handle_get_rootdir( ext2fs_t *fs, message_t *request ){
 		}
 	};
 
-	c4_msg_send( &msg, request->sender );
+	c4rt_connman_server_respond(conn, &msg);
+	//c4_msg_send( &msg, request->sender );
 }
 
-static void handle_get_node_info( ext2fs_t *fs, message_t *request ){
+static
+void handle_get_node_info( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	ext2_inode_t inode;
 
-	if ( ! ext2_get_inode( fs, &inode, request->data[0] )){
-		send_error( request, FS_ERROR_NOT_FOUND );
+	if ( ! ext2_get_inode(fs, &inode, request->data[0])) {
+		//send_error( request, FS_ERROR_NOT_FOUND );
+		send_error(conn, FS_ERROR_NOT_FOUND);
 		return;
 	}
 
@@ -233,40 +296,42 @@ static void handle_get_node_info( ext2fs_t *fs, message_t *request ){
 		.type = FS_MSG_COMPLETED,
 		.data = {
 			inode.lower_size,
-			translate_type( ext2_inode_type( &inode )),
+			translate_type(ext2_inode_type(&inode)),
 		},
 	};
 
-	c4_msg_send( &msg, request->sender );
+	c4rt_connman_server_respond(conn, &msg);
+	//c4_msg_send( &msg, request->sender );
 }
 
-static void handle_list_dir( ext2fs_t *fs, message_t *request ){
+static
+void handle_list_dir( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	message_t msg;
 	unsigned sent = 0;
+	client_state_t *cli = conn->prog_data;
 
-	if ( !is_connected( request )){
-		c4_debug_printf( "--- ext2: got error\n" );
-		send_error( request, FS_ERROR_NOT_CONNECTED );
+	if (!cli) {
+		send_error(conn, FS_ERROR_BAD_REQUEST);
 		return;
 	}
 
-	if ( connection.index * ext2_block_size(fs) >= current_inode.lower_size ){
+	if (cli->index * ext2_block_size(fs) >= cli->e2node.lower_size) {
 		goto done;
 	}
 
-	uint8_t *dirbuf = ext2_inode_read_block( fs, &current_inode, connection.index );
+	uint8_t *dirbuf = ext2_inode_read_block(fs, &cli->e2node, cli->index);
 	ext2_dirent_t *dirent = (void *)dirbuf;
 
 	for ( unsigned i = 0; i < ext2_block_size(fs); ){
 		fs_dirent_t ent;
 
-		copy_name( &ent, dirent );
+		copy_name(&ent, dirent);
 		ent.type = translate_type( dirent->type );
 		ent.name_len = dirent->name_length;
 		ent.inode = dirent->inode;
 
-		if ( c4_ringbuf_can_write( connection.buffer, sizeof(ent) )){
-			c4_ringbuf_write( connection.buffer, &ent, sizeof(fs_dirent_t) );
+		if (c4_ringbuf_can_write(conn->ringbuf, sizeof(ent))) {
+			c4_ringbuf_write(conn->ringbuf, &ent, sizeof(fs_dirent_t));
 			sent++;
 		}
 
@@ -274,44 +339,49 @@ static void handle_list_dir( ext2fs_t *fs, message_t *request ){
 		dirent = (void *)(dirbuf + i);
 	}
 
-	connection.index++;
+	cli->index++;
 
 done:
 	msg.type    = FS_MSG_COMPLETED;
 	msg.data[0] = sent;
-	c4_msg_send( &msg, request->sender );
+	//c4_msg_send( &msg, request->sender );
+	c4rt_connman_server_respond(conn, &msg);
 }
 
-static void handle_read_block( ext2fs_t *fs, message_t *request ){
+static
+void handle_read_block( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	size_t sent = 0;
+	client_state_t *cli = conn->prog_data;
 
-	if ( !is_connected( request )){
-		send_error( request, FS_ERROR_NOT_CONNECTED );
+	if (!cli) {
+		send_error(conn, FS_ERROR_BAD_REQUEST);
 		return;
 	}
 
-	if ( connection.index >= current_inode.lower_size ){
+	if (cli->index >= cli->e2node.lower_size) {
 		goto done;
 	}
 
 	size_t blocksize = ext2_block_size(fs);
-	size_t size      = current_inode.lower_size;
-	size_t index     = connection.index;
+	size_t size      = cli->e2node.lower_size;
+	size_t index     = cli->index;
 	size_t diff      = size - index;
 	size_t writesize = (diff > blocksize)? blocksize : diff;
 	size_t offset    = index % blocksize;
 
-	if ( !c4_ringbuf_can_write( connection.buffer, writesize )){
-		send_error( request, FS_ERROR_QUEUE_FULL );
+	if (!c4_ringbuf_can_write(conn->ringbuf, writesize)) {
+		send_error(conn, FS_ERROR_QUEUE_FULL);
 		return;
 	}
 
-	unsigned block = connection.index / blocksize;
-	uint8_t *foo = ext2_inode_read_block( fs, &current_inode, block );
-	size_t wrote = c4_ringbuf_write( connection.buffer, foo + offset, writesize );
+	unsigned block = cli->index / blocksize;
+	uint8_t *foo = ext2_inode_read_block(fs, &cli->e2node, block);
+	size_t wrote = c4_ringbuf_write(conn->ringbuf, foo + offset, writesize);
 
-	sent += writesize;
-	connection.index += writesize;
+	sent += wrote;
+	cli->index += wrote;
+	//sent += writesize;
+	//cli->index += writesize;
 
 done: ;
 	message_t msg = {
@@ -319,5 +389,6 @@ done: ;
 		.data = { sent },
 	};
 
-	c4_msg_send( &msg, request->sender );
+	c4rt_connman_server_respond(conn, &msg);
+	//c4_msg_send( &msg, request->sender );
 }

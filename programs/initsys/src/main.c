@@ -31,29 +31,36 @@ prognode_t *enumerate_initprogs( unsigned fs ){
 	fs_node_t rootdir = {};
 	fs_node_t nodebuf = {};
 
-	fs_connect( fs, buffer, &conn );
-	fs_get_root_dir( conn.server, &rootdir );
-	fs_set_node( &conn, &rootdir );
+	//fs_connect( fs, buffer, &conn );
+	c4_debug_printf("--- initsys: connecting to server...\n");
+	fs_connect(fs, &conn);
+	c4_debug_printf("--- initsys: connected!\n");
+	fs_get_root_dir(&conn, &rootdir);
+	fs_get_root_dir(&conn, &rootdir);
+	c4_debug_printf("--- initsys: got root dir...\n");
+	fs_set_node(&conn, &rootdir);
 
-	if ( fs_find_name( &conn, &nodebuf, "sbin", 4 ) > 0 ){
-		fs_set_node( &conn, &nodebuf );
+	c4_debug_printf("--- initsys: looking for stuff...\n");
+	if (fs_find_name(&conn, &nodebuf, "sbin", 4) > 0) {
+		fs_set_node(&conn, &nodebuf);
 
+		c4_debug_printf("--- initsys: got here...\n");
 		fs_dirent_t dirbuf;
-		while ( fs_next_dirent( &conn, &dirbuf ) > 0 ){
-			if ( strequal( dirbuf.name, "." ) || strequal( dirbuf.name, ".." )){
+		while (fs_next_dirent(&conn, &dirbuf) > 0) {
+			if (strequal(dirbuf.name, ".") || strequal(dirbuf.name, "..")) {
 				continue;
 			}
 
 			fs_node_t foo;
-			fs_dirent_to_node( conn.server, &dirbuf, &foo );
+			fs_dirent_to_node(&conn, &dirbuf, &foo);
 
-			prognode_t *asdf = c4a_alloc( &progheap, sizeof( prognode_t ));
+			prognode_t *asdf = c4a_alloc(&progheap, sizeof(prognode_t));
 			asdf->node = foo;
 			asdf->next = NULL;
 
-			strncpy( asdf->name, dirbuf.name, FS_MAX_NAME_LEN );
+			strncpy(asdf->name, dirbuf.name, FS_MAX_NAME_LEN);
 
-			if ( head ){
+			if (head) {
 				head->next = asdf;
 				head       = head->next;
 
@@ -63,14 +70,14 @@ prognode_t *enumerate_initprogs( unsigned fs ){
 
 			c4_debug_printf(
 				"--- initsys: found \"%s\", inode %u, size: %u\n",
-				dirbuf.name, foo.inode, foo.size );
+				dirbuf.name, foo.inode, foo.size);
 		}
 
 	} else {
 		c4_debug_printf( "--- initsys: could not find /sbin, exiting...\n" );
 	}
 
-	fs_disconnect( &conn );
+	fs_disconnect(&conn);
 	return ret;
 }
 
@@ -91,7 +98,8 @@ Elf32_Ehdr *read_program( unsigned fs, prognode_t *prog ){
 		goto done;
 	}
 
-	fs_connect( fs, buffer, &conn );
+	//fs_connect( fs, buffer, &conn );
+	fs_connect(fs, &conn);
 	fs_set_node( &conn, &prog->node );
 
 	size_t i = 0;
@@ -127,15 +135,18 @@ int load_program( unsigned fs, prognode_t *prog, unsigned nameserver ){
 	return 0;
 }
 
-void _start( uintptr_t nameserver ){
+//void _start( uintptr_t nameserver ){
+int main(int argc, char *argv[]) {
 	// TODO: init stub in c4rt which takes care of common things like
 	//       heap initialization
 	c4a_heap_init( &progheap, 0xbeef0000 );
 	c4_debug_printf( "--- initsys: hello, world! thread %u\n",
 	                 c4_get_id());
 
+	int nameserver = getnameserv();
+
 	unsigned fs = 0;
-	while ( !fs ) fs = nameserver_lookup( nameserver, "/dev/ext2fs" );
+	while (!fs) fs = nameserver_lookup( nameserver, "/dev/ext2fs" );
 
 	c4_debug_printf( "--- initsys: have fs at %u\n", fs );
 
@@ -154,4 +165,5 @@ void _start( uintptr_t nameserver ){
 	}
 
 	c4_exit();
+	return 0;
 }

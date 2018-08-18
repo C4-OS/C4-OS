@@ -9,6 +9,7 @@
 uint8_t buffer[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
 
 void _start( unsigned nameserver ){
+	/* TODO: maybe re-implement this idk
 	c4_debug_printf( "--- atatest: got here\n" );
 	unsigned ata = 0;
 
@@ -33,6 +34,7 @@ void _start( unsigned nameserver ){
 
 		c4_debug_printf( "\n" );
 	}
+	*/
 
 	c4_exit();
 }

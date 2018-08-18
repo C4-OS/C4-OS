@@ -1,9 +1,11 @@
 #ifndef _C4OS_EXT2FS_H
 #define _C4OS_EXT2FS_H 1
+#include <c4/message.h>
+#include <c4rt/connman.h>
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <c4/message.h>
 
 enum {
 	EXT2_SIGNATURE = 0xef53,
@@ -195,9 +197,11 @@ typedef struct ext2fs {
 	size_t block_device_start;
 
 	unsigned block_device;
+	c4rt_conn_server_t server;
 } ext2fs_t;
 
-void ext2_handle_request( ext2fs_t *fs, message_t *request );
+//void ext2_handle_request( ext2fs_t *fs, message_t *request );
+void ext2_server(ext2fs_t *fs);
 ext2_superblock_t *ext2_get_superblock( unsigned device, unsigned drive );
 void *ext2_read_block( ext2fs_t *fs, unsigned block );
 ext2_block_group_desc_t *ext2_get_block_descs( ext2fs_t *ext2 );

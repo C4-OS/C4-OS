@@ -24,12 +24,19 @@ enum {
 	C4RT_CONNMAN_READ,
 };
 
+enum {
+	C4RT_CONNMAN_NO_BLOCK = false,
+	C4RT_CONNMAN_BLOCK = true,
+};
+
 // this struct is used both as the client handle, and the internal
 // client struct of the server, which keeps things simpler.
 typedef struct {
 	uint32_t server_port;
-	uint32_t async_port;
+	uint32_t async_to;
+	uint32_t async_from;
 	uint32_t client_id;
+	void     *prog_data;
 
 	c4_mem_object_t bufobj;
 	c4_ringbuf_t *ringbuf;
@@ -45,8 +52,7 @@ void c4rt_connman_disconnect(c4rt_conn_t *conn);
 
 bool c4rt_connman_send(c4rt_conn_t *conn, message_t *msg);
 bool c4rt_connman_recv(c4rt_conn_t *conn, message_t *msg, bool block);
-size_t c4rt_connman_write(c4rt_conn_t *conn, void *ptr, size_t n);
-size_t c4rt_connman_read(c4rt_conn_t *conn, void *ptr, size_t maxlen);
+bool c4rt_connman_call(c4rt_conn_t *conn, message_t *msg);
 
 void c4rt_connman_server_init(c4rt_conn_server_t *serv, uint32_t port);
 void c4rt_connman_server_deinit(c4rt_conn_server_t *serv);

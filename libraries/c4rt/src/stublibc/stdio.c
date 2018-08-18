@@ -6,41 +6,45 @@
 
 static fs_node_t root_dir;
 static fs_node_t current_dir;
+static fs_connection_t current_fs;
+
 static unsigned  root_server = 0;
-static uint8_t   fs_buffer[PAGE_SIZE] ALIGN_TO(PAGE_SIZE);
+//static uint8_t   fs_buffer[PAGE_SIZE] ALIGN_TO(PAGE_SIZE);
 
 static inline void init_rootfs( void ){
 	static bool initialized = false;
 
-	if ( initialized ) {
+	if (initialized) {
 		return;
 	}
 
 	initialized = true;
-	char *rootdev = getenv( "rootfs" );
+	char *rootdev = getenv("rootfs");
 	unsigned nameserver = getnameserv();
 
-	if ( !rootdev ){
-		c4_debug_printf( "--- thread %u: could not find rootfs variable\n",
+	if (!rootdev) {
+		c4_debug_printf("--- thread %u: could not find rootfs variable\n",
 			c4_get_id());
 		return;
 	}
 
-	if (( root_server = nameserver_lookup( nameserver, rootdev )) == 0 ){
-		c4_debug_printf( "--- thread %u: could not open rootfs \"%s\"\n",
-			c4_get_id(), rootdev );
+	if ((root_server = nameserver_lookup(nameserver, rootdev)) == 0) {
+		c4_debug_printf("--- thread %u: could not open rootfs \"%s\"\n",
+			c4_get_id(), rootdev);
 		return;
 	}
 
-	fs_get_root_dir( root_server, &root_dir );
+	fs_connect(root_server, &current_fs);
+	//fs_get_root_dir(root_server, &root_dir);
+	fs_get_root_dir(&current_fs, &root_dir);
 	current_dir = root_dir;
 }
 
 static unsigned translate_modeflags( const char *mode ){
 	unsigned ret = 0;
 
-	for ( unsigned i = 0; mode[i]; i++ ){
-		switch ( mode[i] ){
+	for (unsigned i = 0; mode[i]; i++) {
+		switch (mode[i]) {
 			case 'r': ret |= FILE_MODE_READ;   break;
 			case 'w': ret |= FILE_MODE_WRITE;  break;
 			case '+': ret |= FILE_MODE_APPEND; break;
@@ -57,10 +61,13 @@ FILE *fopen( const char *path, const char *mode ){
 	FILE *ret = NULL;
 	char namebuf[FS_MAX_NAME_LEN + 1];
 	fs_node_t temp = (*path == '/')? path++, root_dir : current_dir;
+
+	/*
 	fs_connection_t conn = {};
 
 	//fs_connect( root_server, fs_buffer, &conn );
-	fs_connect( root_server, fs_buffer, &conn );
+	//fs_connect( root_server, fs_buffer, &conn );
+	*/
 
 	for ( int found = 1; found > 0; ){
 		while ( *path == '/' ) path++;
@@ -69,41 +76,49 @@ FILE *fopen( const char *path, const char *mode ){
 
 		if ( foo == 0 ){
 			ret          = calloc( 1, sizeof( FILE ));
-			ret->server  = conn.server;
+			//ret->server  = conn.server;
 			ret->status  = FILE_STATUS_PRETTY_GOOD;
 			ret->node    = temp;
 			ret->charbuf = '\0';
 			ret->mode    = translate_modeflags( mode );
+			/*
 			ret->conn    = (fs_connection_t){ };
 
 			fs_set_connection_info( &ret->conn, &temp, conn.server );
+			*/
+
+			fs_connect(root_server, &ret->conn);
+			fs_set_node(&ret->conn, &ret->node);
 			break;
 		}
 
-		strlcpy( namebuf, path, (foo + 1 < maxlen)? foo + 1 : maxlen );
-		fs_set_node( &conn, &temp );
-		found = fs_find_name( &conn, &temp, namebuf, foo );
+		//fs_set_node(&conn, &temp);
+		fs_set_node(&current_fs, &temp);
+
+		strlcpy(namebuf, path, (foo + 1 < maxlen)? foo + 1 : maxlen);
+		found = fs_find_name(&current_fs, &temp, namebuf, foo);
 		path += foo;
 
-		if ( found < 0 ){
+		if (found < 0) {
 			c4_debug_printf( "--- got error: %u\n", -found );
 			break;
 		}
 	}
 
-	fs_disconnect( &conn );
+	//fs_disconnect( &conn );
 	return ret;
 }
 
 int fclose( FILE *fp ){
 	fp->status = FILE_STATUS_CLOSED;
+	fs_disconnect(&fp->conn);
 	return 0;
 }
 
 FILE *freopen( const char *path, const char *mode, FILE *fp ){
 	FILE *temp = fopen( path, mode );
 
-	if ( temp ){
+	if (temp) {
 		fclose( fp );
 		*fp = *temp;
 		return fp;
@@ -113,15 +128,14 @@ FILE *freopen( const char *path, const char *mode, FILE *fp ){
 }
 
 size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
-	fs_connection_t conn = {};
+	//fs_connection_t conn = {};
 	uint8_t *buffer = ptr;
 	size_t len = size * members;
 
 	size_t ret = 0;
 	int nread = 0;
 
-	while (( nread = fs_read_block_autoconn(&fp->conn, buffer + ret, len)) > 0 )
-	{
+	while ((nread = fs_read_block(&fp->conn, buffer + ret, len)) > 0) {
 		ret += nread;
 		len -= nread;
 	}

@@ -24,6 +24,8 @@ void _start( unsigned nameserver ){
 	}
 	*/
 
+	// TODO: maybe reimplement this idk
+	/*
 	c4_debug_printf( "--- fstest: have fs server at %u\n", fs );
 
 	c4_msg_recieve( &msg, 0 );
@@ -70,6 +72,7 @@ void _start( unsigned nameserver ){
 
 	fs_disconnect( &conn );
 	c4_debug_printf( "--- fstest: disconnected from server %u\n", fs );
+	*/
 
 	c4_exit();
 }

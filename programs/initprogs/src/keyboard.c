@@ -42,9 +42,9 @@ int interrupt_queue = -1;
 unsigned get_scancode( void ){
 	message_t msg;
 
-	c4_msg_recieve_async( &msg, interrupt_queue, MESSAGE_ASYNC_BLOCK );
+	c4_msg_recieve_async(&msg, interrupt_queue, MESSAGE_ASYNC_BLOCK);
 
-	return c4_in_byte( 0x60 );
+	return c4_in_byte(0x60);
 }
 
 char decode_scancode( unsigned long code ){
@@ -75,9 +75,9 @@ void get_event( keyboard_event_t *ev ){
 	ev->scancode = get_scancode();
 	ev->event    = (ev->scancode & 0x80) ? KEYBOARD_EVENT_KEY_UP
 	                                     : KEYBOARD_EVENT_KEY_DOWN;
-	char c = decode_scancode( ev->scancode );
+	char c = decode_scancode(ev->scancode);
 
-	if ( is_modifier( c )){
+	if (is_modifier(c)) {
 		switch ( ev->event ){
 			case KEYBOARD_EVENT_KEY_DOWN: modifiers |=   1 << c;  break;
 			case KEYBOARD_EVENT_KEY_UP:   modifiers &= ~(1 << c); break;
@@ -88,9 +88,9 @@ void get_event( keyboard_event_t *ev ){
 	ev->modifiers = modifiers;
 }
 
-void handle_get_event( message_t *request ){
+void handle_get_event(uint32_t port, message_t *request){
 	keyboard_event_t event;
-	get_event( &event );
+	get_event(&event);
 
 	message_t msg = {
 		.type = KEYBOARD_MSG_EVENT,
@@ -102,40 +102,41 @@ void handle_get_event( message_t *request ){
 		},
 	};
 
-	c4_msg_send( &msg, request->sender );
+	c4_msg_send(&msg, port);
 }
 
-void _start( uintptr_t nameserv ){
+void _start(uintptr_t nameserv) {
 	int serv_port = c4_msg_create_sync();
 	interrupt_queue = c4_msg_create_async();
 
-	nameserver_bind( nameserv, "/dev/keyboard", serv_port );
-
-	/*
-	message_t msg = {
-		.type = MESSAGE_TYPE_INTERRUPT_SUBSCRIBE,
-		.data = { INTERRUPT_KEYBOARD, },
-	};
-	*/
+	nameserver_bind(nameserv, "/dev/keyboard", serv_port);
 
 	// read input port in case there was a keypress interrupt before
 	// the driver had a chance to handle it
-	c4_in_byte( 0x60 );
-	c4_interrupt_subscribe( INTERRUPT_KEYBOARD, interrupt_queue );
+	c4_in_byte(0x60);
+	c4_interrupt_subscribe(INTERRUPT_KEYBOARD, interrupt_queue);
 	//c4_msg_send( &msg, 0 );
 
 	while ( true ){
 		message_t msg;
-		//c4_msg_recieve( &msg, 0 );
-		c4_msg_recieve( &msg, serv_port );
+		c4_msg_recieve(&msg, serv_port);
 
-		switch ( msg.type ){
+		if (msg.type != MESSAGE_TYPE_GRANT_OBJECT) {
+			continue;
+		}
+
+		uint32_t temp = msg.data[5];
+		c4_msg_recieve(&msg, temp);
+
+		switch (msg.type) {
 			case KEYBOARD_MSG_GET_EVENT:
-				handle_get_event( &msg );
+				handle_get_event(temp, &msg);
 				break;
 
 			default:
 				break;
 		}
+
+		c4_cspace_remove(C4_CURRENT_CSPACE, temp);
 	}
 }

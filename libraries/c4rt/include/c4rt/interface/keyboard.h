@@ -31,16 +31,39 @@ typedef struct keyboard_event {
 	unsigned event;
 } keyboard_event_t;
 
+typedef struct keyboard {
+	uint32_t server;
+	uint32_t endpoint;
+} keyboard_t;
+
+
 static inline bool keyboard_event_is_modifier( keyboard_event_t *ev ){
 	return ev->character < KEYBOARD_MOD_END;
 }
 
-static inline void keyboard_get_event( unsigned id, keyboard_event_t *ev ){
+static inline bool keyboard_connect(keyboard_t *kbd, uint32_t server) {
+	kbd->endpoint = c4_msg_create_sync();
+	kbd->server = server;
+
+	return true;
+}
+
+static inline void keyboard_disconnect(keyboard_t *kbd) {
+	c4_cspace_remove(C4_CURRENT_CSPACE, kbd->endpoint);
+}
+
+static inline void keyboard_call(keyboard_t *kbd, message_t *msg) {
+	c4_cspace_grant(kbd->endpoint, kbd->server,
+	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
+	c4_msg_send(msg, kbd->endpoint);
+	c4_msg_recieve(msg, kbd->endpoint);
+}
+
+static inline void keyboard_get_event(keyboard_t *kbd, keyboard_event_t *ev) {
 	message_t msg = { .type = KEYBOARD_MSG_GET_EVENT, };
 
-	c4_msg_send( &msg, id );
-	c4_msg_recieve( &msg, id );
-	C4_ASSERT( msg.type == KEYBOARD_MSG_EVENT );
+	keyboard_call(kbd, &msg);
+	C4_ASSERT(msg.type == KEYBOARD_MSG_EVENT);
 
 	ev->character = msg.data[0];
 	ev->modifiers = msg.data[1];
@@ -48,12 +71,10 @@ static inline void keyboard_get_event( unsigned id, keyboard_event_t *ev ){
 	ev->event     = msg.data[3];
 }
 
-static inline unsigned keyboard_get_modifiers( unsigned id ){
+static inline unsigned keyboard_get_modifiers(keyboard_t *kbd) {
 	message_t msg = { .type = KEYBOARD_MSG_GET_MODIFIERS, };
 
-	c4_msg_send( &msg, id );
-	c4_msg_recieve( &msg, id );
-
+	keyboard_call(kbd, &msg);
 	return msg.data[0];
 }
 

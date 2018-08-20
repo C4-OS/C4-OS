@@ -8,7 +8,8 @@
 #include <c4rt/interface/keyboard.h>
 
 static unsigned display = 0;
-static unsigned keyboard = 0;
+//static unsigned keyboard = 0;
+static keyboard_t keyboard;
 
 static void putchar( char c ){
 	console_put_char( display, c );
@@ -30,27 +31,27 @@ static char *read_keyboard( char *buf, unsigned n ){
 retry:
 		{
 			keyboard_event_t ev;
-			keyboard_get_event( keyboard, &ev );
+			keyboard_get_event(&keyboard, &ev);
 
-			if ( keyboard_event_is_modifier( &ev ))
+			if (keyboard_event_is_modifier(&ev))
 				goto retry;
 
-			if ( ev.event != KEYBOARD_EVENT_KEY_DOWN )
+			if (ev.event != KEYBOARD_EVENT_KEY_DOWN)
 				goto retry;
 
 			c = ev.character;
 		}
 
-		console_put_char( display, c );
+		console_put_char(display, c);
 
-		if ( i && c == '\b' ){
+		if (i && c == '\b') {
 			i--;
 			goto retry;
 		}
 
 		buf[i] = c;
 
-		if ( c == '\n' ){
+		if (c == '\n') {
 			break;
 		}
 	}
@@ -62,19 +63,19 @@ retry:
 
 static FILE *cur_include = NULL;
 
-void set_cur_include( FILE *fp ){
+void set_cur_include(FILE *fp) {
 	cur_include = fp;
 }
 
-static char *read_include_file( char *buf, unsigned n ){
+static char *read_include_file(char *buf, unsigned n) {
 	buf[0] = '\0';
 
-	if ( !cur_include ){
+	if (!cur_include) {
 		return buf;
 	}
 
-	fgets( buf, n, cur_include );
-	if ( strlen( buf ) == 0 ){
+	fgets(buf, n, cur_include);
+	if (strlen(buf) == 0) {
 		cur_include = NULL;
 	}
 
@@ -82,11 +83,11 @@ static char *read_include_file( char *buf, unsigned n ){
 }
 
 static char *read_line( char *buf, unsigned n ){
-	if ( cur_include ){
-		return read_include_file( buf, n );
+	if (cur_include) {
+		return read_include_file(buf, n);
 
 	} else {
-		return read_keyboard( buf, n );
+		return read_keyboard(buf, n);
 	}
 }
 
@@ -95,8 +96,8 @@ char minift_get_char( void ){
 	static bool initialized = false;
 	static char *ptr;
 
-	if ( !initialized ){
-		for ( unsigned i = 0; i < sizeof(input); i++ ){ input[i] = 0; }
+	if (!initialized) {
+		for (unsigned i = 0; i < sizeof(input); i++) { input[i] = 0; }
 		// left here in case some sort of init script is added in the future
 		//ptr = input;
 		ptr =
@@ -114,19 +115,19 @@ char minift_get_char( void ){
 		initialized = true;
 	}
 
-	while ( !*ptr ){
-		ptr = read_line( input, sizeof( input ));
+	while (!*ptr) {
+		ptr = read_line(input, sizeof(input));
 	}
 
 	return *ptr++;
 }
 
-void minift_put_char( char c ){
-	console_put_char( display, c );
+void minift_put_char(char c){
+	console_put_char(display, c);
 }
 
-void add_c4_archives( minift_vm_t *vm );
-void init_c4_allocator( minift_vm_t *vm );
+void add_c4_archives(minift_vm_t *vm);
+void init_c4_allocator(minift_vm_t *vm);
 
 static unsigned long data[0x8000];
 
@@ -137,13 +138,16 @@ int main( int argc, char *argv[], char *envp[] ){
 	unsigned long nameserver = getnameserv();
 
 	// TODO: implement a better way of waiting for devices to avoid polling
-	while ( !display ){
-		display  = nameserver_lookup( nameserver, "/dev/console" );
+	while (!display) {
+		display  = nameserver_lookup(nameserver, "/dev/console");
 	}
 
-	while ( !keyboard ){
-		keyboard = nameserver_lookup( nameserver, "/dev/keyboard" );
+	uint32_t kbd_port = 0;
+	while (!kbd_port) {
+		kbd_port = nameserver_lookup(nameserver, "/dev/keyboard");
 	}
+
+	keyboard_connect(&keyboard, kbd_port);
 
 	minift_vm_t foo;
 	minift_stack_t data_stack = {
@@ -164,10 +168,11 @@ int main( int argc, char *argv[], char *envp[] ){
 		.ptr   = params,
 	};
 
-	minift_init_vm( &foo, &call_stack, &data_stack, &param_stack, NULL );
-	init_c4_allocator( &foo );
-	add_c4_archives( &foo );
-	minift_run( &foo );
+	minift_init_vm(&foo, &call_stack, &data_stack, &param_stack, NULL);
+	init_c4_allocator(&foo);
+	add_c4_archives(&foo);
+	minift_run(&foo);
 
+	keyboard_disconnect(&keyboard);
 	return 0;
 }

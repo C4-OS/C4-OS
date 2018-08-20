@@ -251,8 +251,8 @@ void c4a_free( c4a_heap_t *heap, void *ptr ){
 		c4_debug_printf(
 			"--- c4alloc: Have double free or corrupted block!\n"
 			"--- c4alloc: - at %p from %p, cowardly refusing to continue...\n"
-			"--- c4alloc: - current thread: %u, pager: %u\n",
-			node, ptr, c4_get_id(), c4_get_pager() );
+			"--- c4alloc: - current thread: %u\n",
+			node, ptr, c4_get_id());
 
 		return;
 	}

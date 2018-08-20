@@ -275,8 +275,6 @@ void _start( unsigned long ndisplay ){
 
 	puts( "hello, pci at thread " );
 	print_num( c4_get_id( ));
-	puts( ", pager: " );
-	print_num( c4_get_pager( ));
 	puts( "\n" );
 
 	pci_dump_devices( );

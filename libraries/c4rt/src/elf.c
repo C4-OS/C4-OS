@@ -131,7 +131,6 @@ c4_process_t elf_load_full( Elf32_Ehdr *elf,
 	void *entry          = (void *)elf->e_entry;
 	uintptr_t to_stack   = 0xa0000000;
 	uintptr_t from_stack = 0xda000000;
-	uintptr_t stack      = to_stack + stack_offset;
 
 	int c4ret = 0;
 	int msgq = c4_msg_create_sync();
@@ -149,7 +148,7 @@ c4_process_t elf_load_full( Elf32_Ehdr *elf,
 
 	// map the bootinfo structure
 	// TODO: possibly make bootinfo mapping done on-demand, but this is fine
-	c4ret = c4_addrspace_map(aspace, C4_BOOT_INFO, BOOTINFO_ADDR, PAGE_READ);
+	c4ret = c4_addrspace_map(aspace, C4_BOOT_INFO, (uintptr_t)BOOTINFO_ADDR, PAGE_READ);
 	C4_ASSERT(c4ret >= 0);
 
 	c4ret = c4_addrspace_map(C4_CURRENT_ADDRSPACE, frame, from_stack,

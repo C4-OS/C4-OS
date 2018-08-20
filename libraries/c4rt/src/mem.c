@@ -3,6 +3,9 @@
 #include <c4rt/addrman.h>
 #include <c4/error.h>
 
+// TODO: split up headers, this is just needed for get_genregion()
+#include <c4rt/stublibc.h>
+
 c4_mem_object_t c4_memobj_make( uint32_t obj,
                                 uintptr_t vaddr,
                                 unsigned permissions )

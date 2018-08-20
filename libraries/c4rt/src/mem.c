@@ -169,19 +169,37 @@ int c4_addrspace_unmap( uint32_t addrspace, uintptr_t address ){
 	return ret;
 }
 
+// TODO: note in docs that size is in pages
+int c4_phys_frame_create( uintptr_t physical, size_t size, uint32_t context ){
+	int ret;
+	DO_SYSCALL(SYSCALL_PHYS_FRAME_CREATE, physical, size, context, 0, ret);
+	return ret;
+}
+
 int c4_phys_frame_split( uint32_t frame, size_t offset ){
 	int ret;
 	DO_SYSCALL( SYSCALL_PHYS_FRAME_SPLIT, frame, offset, 0, 0, ret );
 	return ret;
 }
 
-// Deprecated
 void *c4_request_physical( uintptr_t virt,
                            uintptr_t physical,
                            unsigned size,
                            unsigned permissions )
 {
-	return NULL;
+	int frame = c4_phys_frame_create(physical, size, 0 /* TODO: C4_CONTEXT */);
+	if (frame < 0) {
+		return NULL;
+	}
+
+	int k = c4_addrspace_map(C4_CURRENT_ADDRSPACE, frame, virt, permissions);
+	c4_cspace_remove(C4_CURRENT_CSPACE, frame);
+
+	if (k < 0) {
+		return NULL;
+	}
+
+	return (void *)virt;
 }
 
 // Deprecated

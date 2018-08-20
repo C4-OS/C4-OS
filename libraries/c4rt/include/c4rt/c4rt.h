@@ -56,6 +56,8 @@ int c4_addrspace_map( uint32_t addrspace,
                       uintptr_t address,
                       unsigned permissions );
 int c4_addrspace_unmap( uint32_t addrspace, uintptr_t address );
+
+int c4_phys_frame_create( uintptr_t physical, size_t size, uint32_t context );
 int c4_phys_frame_split( uint32_t frame, size_t offset );
 
 // capability functions
@@ -74,7 +76,8 @@ DEPRECATED int c4_mem_map_to( unsigned thread_id, void *from, void *to,
 DEPRECATED int c4_mem_grant_to( unsigned thread_id, void *from, void *to,
                      unsigned size, unsigned permissions );
 
-DEPRECATED void *c4_request_physical( uintptr_t virt,
+// TODO: note in docs that size is in pages
+void *c4_request_physical( uintptr_t virt,
                            uintptr_t physical,
                            unsigned size,
                            unsigned permissions );

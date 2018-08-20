@@ -4,6 +4,7 @@
 #include <c4rt/stublibc.h>
 #include <c4/paging.h>
 #include <c4/thread.h>
+#include <c4/bootinfo.h>
 
 bool elf_is_valid( Elf32_Ehdr *elf ){
 	return elf->e_ident[0] == ELFMAG0
@@ -135,15 +136,21 @@ c4_process_t elf_load_full( Elf32_Ehdr *elf,
 	int c4ret = 0;
 	int msgq = c4_msg_create_sync();
 
-	c4_cspace_copy(C4_CURRENT_CSPACE, msgq,       cspace, C4_SERV_PORT);
-	c4_cspace_copy(C4_CURRENT_CSPACE, nameserver, cspace, C4_NAMESERVER);
-	c4_cspace_copy(C4_CURRENT_CSPACE, aspace,     cspace, C4_CURRENT_ADDRSPACE);
-	c4_cspace_copy(C4_CURRENT_CSPACE, pager,      cspace, C4_PAGER);
+	c4_cspace_copy(C4_CURRENT_CSPACE, msgq,         cspace, C4_SERV_PORT);
+	c4_cspace_copy(C4_CURRENT_CSPACE, nameserver,   cspace, C4_NAMESERVER);
+	c4_cspace_copy(C4_CURRENT_CSPACE, aspace,       cspace, C4_CURRENT_ADDRSPACE);
+	c4_cspace_copy(C4_CURRENT_CSPACE, C4_BOOT_INFO, cspace, C4_BOOT_INFO);
+	c4_cspace_copy(C4_CURRENT_CSPACE, pager,        cspace, C4_PAGER);
 
 	if (nameserver) {
 		c4_cspace_restrict( cspace, C4_NAMESERVER,
 							CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE );
 	}
+
+	// map the bootinfo structure
+	// TODO: possibly make bootinfo mapping done on-demand, but this is fine
+	c4ret = c4_addrspace_map(aspace, C4_BOOT_INFO, BOOTINFO_ADDR, PAGE_READ);
+	C4_ASSERT(c4ret >= 0);
 
 	c4ret = c4_addrspace_map(C4_CURRENT_ADDRSPACE, frame, from_stack,
 	                         PAGE_READ | PAGE_WRITE);

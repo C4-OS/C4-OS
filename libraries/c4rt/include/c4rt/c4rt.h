@@ -12,9 +12,10 @@ enum {
 	C4_CURRENT_CSPACE = 0,
 	C4_SERV_PORT = 1,
 	C4_CURRENT_ADDRSPACE = 2,
-	C4_PAGER = 3,
-	C4_NAMESERVER = 4,
-	C4_DEFAULT_OBJECT_END = 5,
+	C4_BOOT_INFO = 3,
+	C4_PAGER = 4,
+	C4_NAMESERVER = 5,
+	C4_DEFAULT_OBJECT_END = 6,
 };
 
 // magic value which is passed by the elf loader to signal that it's using

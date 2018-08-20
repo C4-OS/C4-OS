@@ -32,26 +32,10 @@ Elf32_Sym  *elf_get_sym( Elf32_Ehdr *, int, char * );
 char       *elf_get_sym_name( Elf32_Ehdr *, Elf32_Sym *, char * );
 Elf32_Sym  *elf_get_sym_byname( Elf32_Ehdr *, char *, char * );
 
-// XXX: currently assumes that the returned page(s) will be mapped away
-//      before the next call to allot_pages()
-static inline void *allot_pages( unsigned pages ){
-	//void *ret = (void *)0xd0000000;
-	void *ret = (void *)0xf0000000;
-
-	/*
-	ret = pager_request_pages( c4_get_pager(),
-	                           (uintptr_t)ret,
-	                           PAGE_READ | PAGE_WRITE,
-	                           pages );
-	 */
-
-	// TODO: make sure this actually works, not tested!
-	ret = pager_request_pages_map( c4_get_pager(),
-	                               (uintptr_t)ret,
-	                               PAGE_READ | PAGE_WRITE,
-	                               pages );
-
-	return ret;
+static int32_t allot_pages( unsigned pages ){
+	return pager_request_pages( C4_PAGER,
+	                            PAGE_READ | PAGE_WRITE,
+	                            pages );
 }
 
 static inline uint8_t *elf_push_arg( uint8_t **from,
@@ -123,48 +107,98 @@ static inline void setup_stack_params( uint8_t  **from,
 	elf_push_arg( from, to, 0 );
 }
 
-//int elf_load( Elf32_Ehdr *elf, int nameserver ){
-int elf_load( Elf32_Ehdr *elf, int nameserver, char **argv, char **envp ){
-	unsigned stack_offset = 0xff0;
+c4_process_t elf_load(Elf32_Ehdr *elf, char **argv, char **envp){
+	return elf_load_full(elf, allot_pages, C4_NAMESERVER, C4_PAGER, argv, envp);
+}
 
-	void *entry      = (void *)elf->e_entry;
-	void *to_stack   = (uint8_t *)0xa0000000;
-	void *from_stack = (uint8_t *)allot_pages(1);
-	//void *stack      = (uint8_t *)to_stack + stack_offset;
+c4_process_t elf_load_full( Elf32_Ehdr *elf,
+                            int32_t (*page_allot)(unsigned),
+                            int nameserver,
+                            int pager,
+                            char **argv,
+                            char **envp )
+{
+	c4_process_t ret;
 
-	uint8_t *to   = to_stack + stack_offset;
-	uint8_t *from = from_stack + stack_offset;
+	unsigned stack_offset = 0xfe0;
+	int frame = page_allot(1);
+	int cspace = c4_cspace_create();
+	int aspace = c4_addrspace_create();
+	C4_ASSERT(cspace > 0);
+	C4_ASSERT(aspace > 0);
 
-	setup_stack_params( &from, &to, nameserver, argv, envp );
+	void *entry          = (void *)elf->e_entry;
+	uintptr_t to_stack   = 0xa0000000;
+	uintptr_t from_stack = 0xda000000;
+	uintptr_t stack      = to_stack + stack_offset;
 
-	int thread_id = c4_create_thread( entry, to,
-	                                  THREAD_CREATE_FLAG_NEWMAP);
+	int c4ret = 0;
+	int msgq = c4_msg_create_sync();
 
-	c4_mem_grant_to( thread_id, from_stack, to_stack, 1,
-	                 PAGE_READ | PAGE_WRITE );
+	c4_cspace_copy(C4_CURRENT_CSPACE, msgq,       cspace, C4_SERV_PORT);
+	c4_cspace_copy(C4_CURRENT_CSPACE, nameserver, cspace, C4_NAMESERVER);
+	c4_cspace_copy(C4_CURRENT_CSPACE, aspace,     cspace, C4_CURRENT_ADDRSPACE);
+	c4_cspace_copy(C4_CURRENT_CSPACE, pager,      cspace, C4_PAGER);
 
-	// load program headers
-	for ( unsigned i = 0; i < elf->e_phnum; i++ ){
-		Elf32_Phdr *header = elf_get_phdr( elf, i );
-		uint8_t *progdata  = (uint8_t *)elf + header->p_offset;
-		void    *addr      = (void *)header->p_vaddr;
-		unsigned pages     = (header->p_memsz / PAGE_SIZE)
-		                   + (header->p_memsz % PAGE_SIZE > 0);
-		uint8_t *databuf   = allot_pages( pages );
-		unsigned offset    = header->p_vaddr % PAGE_SIZE;
-		void    *adjaddr   = (uint8_t *)addr - offset;
-
-		for ( unsigned k = 0; k < header->p_filesz; k++ ){
-			databuf[k + offset] = progdata[k];
-		}
-
-		// TODO: translate elf permissions into message permissions
-		c4_mem_grant_to( thread_id, databuf, adjaddr, pages,
-		                 PAGE_READ | PAGE_WRITE );
+	if (nameserver) {
+		c4_cspace_restrict( cspace, C4_NAMESERVER,
+							CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE );
 	}
 
-	c4_set_pager( thread_id, c4_get_pager() );
-	c4_continue_thread( thread_id );
+	c4ret = c4_addrspace_map(C4_CURRENT_ADDRSPACE, frame, from_stack,
+	                         PAGE_READ | PAGE_WRITE);
+	C4_ASSERT(c4ret >= 0);
+	c4ret = c4_addrspace_map(aspace, frame, to_stack, PAGE_READ | PAGE_WRITE);
+	C4_ASSERT(c4ret >= 0);
 
-	return thread_id;
+	uint8_t *from = (void *)(from_stack + stack_offset);
+	uint8_t *to   = (void *)(to_stack   + stack_offset);
+	setup_stack_params(&from, &to, C4_NAMESERVER, argv, envp);
+	c4ret = c4_addrspace_unmap(C4_CURRENT_ADDRSPACE, from_stack);
+	C4_ASSERT(c4ret >= 0);
+
+	int thread_id = c4_create_thread(entry, to, 0);
+	c4_debug_printf("--- elf_load(): made thread %u\n", thread_id);
+	C4_ASSERT(thread_id > 0);
+
+	c4_set_addrspace(thread_id, aspace);
+	c4_set_capspace(thread_id, cspace);
+	c4_set_pager(thread_id, pager);
+
+	ret.addrspace = aspace;
+	ret.capspace  = cspace;
+	ret.thread    = thread_id;
+	ret.endpoint  = msgq;
+
+	// TODO: initialized .bss
+
+	// load program headers
+	for (unsigned i = 0; i < elf->e_phnum; i++) {
+		Elf32_Phdr *header = elf_get_phdr(elf, i);
+		uint8_t *progdata  = (uint8_t *)elf + header->p_offset;
+		uintptr_t addr     = header->p_vaddr;
+		unsigned pages     = (header->p_memsz / PAGE_SIZE)
+		                   + (header->p_memsz % PAGE_SIZE > 0);
+		int frame          = page_allot(pages);
+		uintptr_t databuf  = 0xda000000;
+		uint8_t *dataptr   = (void *)databuf;
+		unsigned offset    = header->p_vaddr % PAGE_SIZE;
+		uintptr_t adjaddr  = addr - offset;
+
+		// TODO: translate elf permissions into message permissions
+		c4_addrspace_map(C4_CURRENT_ADDRSPACE, frame, databuf,
+		                 PAGE_READ | PAGE_WRITE);
+		c4_addrspace_map( aspace, frame, adjaddr, PAGE_READ | PAGE_WRITE );
+
+		for (unsigned k = 0; k < header->p_filesz; k++) {
+			dataptr[k + offset] = progdata[k];
+		}
+
+		c4_addrspace_unmap(C4_CURRENT_ADDRSPACE, databuf);
+		c4_cspace_move(C4_CURRENT_CSPACE, frame, cspace,
+		               i + C4_DEFAULT_OBJECT_END);
+	}
+
+	c4_continue_thread(thread_id);
+	return ret;
 }

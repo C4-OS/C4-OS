@@ -15,23 +15,6 @@ enum {
 
 static name_entry_t names[MAX_NAME_ENTRIES];
 
-// TODO: just replace `putchar` with c4_debug_putchar, no need for code
-//       duplication
-static void putchar( char c ){
-	c4_debug_putchar( c );
-}
-
-static void do_puts( const char *s ){
-	for ( ; *s; s++ ){
-		putchar(*s);
-	}
-}
-
-static void puts( const char *s ){
-	do_puts( "--- nameserver: " );
-	do_puts( s );
-}
-
 void bind_name( uint32_t endpoint, unsigned name ){
 	unsigned i = 0;
 

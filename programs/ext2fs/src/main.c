@@ -131,17 +131,16 @@ void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
 int main(int argc, char *argv[]) {
 	int disk = 0;
 	int serv_port = c4_msg_create_sync();
-	int nameserver = getnameserv();
 
 	C4_ASSERT(c4_memobj_alloc(&block_buffer, PAGE_SIZE, PAGE_READ|PAGE_WRITE));
 	DEBUGF("have block buffer at %p\n", block_buffer.vaddr);
 
 	// TODO: find another way to handle this, this limits the number of
 	//       ext2 filesystems to one per nameserver
-	nameserver_bind( nameserver, "/dev/ext2fs", serv_port );
+	nameserver_bind(C4_NAMESERVER, "/dev/ext2fs", serv_port);
 	
 	while ( !disk ){
-		disk = nameserver_lookup( nameserver, "/dev/ata" );
+		disk = nameserver_lookup(C4_NAMESERVER, "/dev/ata");
 	}
 
 	ext2_superblock_t *temp = ext2_get_superblock( disk, 0 );

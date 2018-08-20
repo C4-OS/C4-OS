@@ -18,7 +18,6 @@ typedef struct prognode {
 } prognode_t;
 
 static c4a_heap_t progheap;
-static uint8_t buffer[PAGE_SIZE] ALIGN_TO(PAGE_SIZE);
 
 static inline bool strequal( const char *a, const char *b ){
 	return strcmp(a, b) == 0;

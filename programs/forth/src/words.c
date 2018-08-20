@@ -53,6 +53,10 @@ static bool c4_minift_recvmsg( minift_vm_t *vm ){
 	return true;
 }
 
+/* TODO: consider reimplementing this later, just needs to use the
+ *       post-capability block interface, but I cba to update this now
+ *       since the interpreter here has just about reached the end of it's
+ *       useful life
 static uint8_t buffer[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
 
 static bool c4_minift_block_read( minift_vm_t *vm ){
@@ -86,6 +90,7 @@ static bool c4_minift_block_write( minift_vm_t *vm ){
 
 	return true;
 }
+*/
 
 static bool c4_minift_console_put_char( minift_vm_t *vm ){
 	unsigned c  = minift_pop( vm, &vm->param_stack );
@@ -256,8 +261,10 @@ static minift_archive_entry_t c4_words[] = {
 	// general interface words
 	{ "sendmsg",  c4_minift_sendmsg, 0 },
 	{ "recvmsg",  c4_minift_recvmsg, 0 },
+	/*
 	{ "block@",   c4_minift_block_read, 0 },
 	{ "block!",   c4_minift_block_write, 0 },
+	*/
 	{ "putchar",  c4_minift_console_put_char, 0 },
 	{ "setpos",   c4_minift_console_set_pos, 0 },
 	{ "clear",    c4_minift_console_clear, 0 },

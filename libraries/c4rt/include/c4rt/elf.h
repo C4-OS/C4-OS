@@ -227,8 +227,23 @@ typedef struct {
 	Elf32_Sword r_append;
 } Elf32_Rela;
 
+// TODO: consider moving process-related stuff into it's own file
+typedef struct c4_process {
+	int addrspace;
+	int capspace;
+	int endpoint;
+	int thread;
+	bool running;
+} c4_process_t;
+
 bool elf_is_valid( Elf32_Ehdr * );
-int elf_load( Elf32_Ehdr *elf, int nameserver, char **argv, char **envp );
+c4_process_t elf_load( Elf32_Ehdr *elf, char **argv, char **envp );
+c4_process_t elf_load_full( Elf32_Ehdr *elf,
+                            int32_t (*page_allot)(unsigned),
+                            int nameserver,
+                            int pager,
+                            char **argv,
+                            char **envp );
 
 Elf32_Shdr *elf_get_shdr( Elf32_Ehdr *, unsigned );
 Elf32_Shdr *elf_get_shdr_byname( Elf32_Ehdr *, char * );

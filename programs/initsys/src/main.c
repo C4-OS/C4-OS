@@ -126,7 +126,7 @@ int load_program( unsigned fs, prognode_t *prog, unsigned nameserver ){
 
 		char *args[] = { prog->name, NULL };
 		char *env[]  = { "rootfs=/dev/ext2fs", NULL };
-		elf_load( foo, nameserver, args, env );
+		elf_load(foo, args, env);
 
 	} else {
 		c4_debug_printf( "--- initsys: could not read file\n" );

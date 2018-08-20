@@ -23,11 +23,6 @@ interpreter.
 
 ### What's in the works? (timeline: next few months)
 
-* Capability-oriented kernel API, currently being written
-  * This is currently the main bottleneck for expanding the system,
-    thread-oriented IPC was much more limiting than I had thought it would be.
-	Once this is working and stable, much more sophisticated programs
-	can be written.
 * SMP support
   * currently being merged into the kernel tree, following capabilities
   * Will involve a scheduler rewrite and lots of new locking code
@@ -35,6 +30,7 @@ interpreter.
   * lua, libpng, freetype2, zlib, the usual suspects
   * currently on hold for capabilities, since that will have major impacts on
     memory management
+  * POSIX compatibility layer
 * Networking
   * e1000, r8139, virtio drivers planned
   * port of lwip or uip for the TCP stack
@@ -48,8 +44,6 @@ interpreter.
 * Platforms
   * x86-64 relatively soon
   * support for some ARM-based SBCs (beaglebone, raspberry pi)
-* Other
-  * Mayyyyybe a posix compatibility layer, still not sure about this one.
 
 ### What's in the future? (timeline: 1+ years)
 

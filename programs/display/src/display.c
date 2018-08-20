@@ -83,7 +83,7 @@ void _start( uintptr_t nameserver ){
 	nameserver_bind( nameserver, "/dev/console", serv_port );
 
 	while ( true ){
-		c4_msg_recieve( &msg, 0 );
+		c4_msg_recieve(&msg, serv_port);
 
 		switch ( msg.type ){
 			case CONSOLE_MSG_PUT_CHAR:

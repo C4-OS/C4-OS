@@ -27,17 +27,14 @@ bool c4rt_connman_connect(c4rt_conn_t *conn, uint32_t server){
 
 	int32_t temppoint = c4_send_temp_endpoint(server);
 	C4_ASSERT(temppoint > 0);
-	c4_debug_printf("--- connman: sent endpoint...\n");
 
 	// send connect request
 	message_t msg = { .type = C4RT_CONNMAN_CONNECT, };
 	c4_msg_send(&msg, temppoint);
-	c4_debug_printf("--- connman: sent connect request...\n");
 
 	// get client ID number
 	c4_msg_recieve(&msg, temppoint);
 	conn->client_id = msg.data[0];
-	c4_debug_printf("--- connman: got client id (%x)\n", conn->client_id);
 
 	// send objects for communication
 	c4_cspace_grant(conn->async_to, temppoint,
@@ -46,10 +43,8 @@ bool c4rt_connman_connect(c4rt_conn_t *conn, uint32_t server){
 	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
 	c4_cspace_grant(conn->bufobj.page_obj, temppoint,
 	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
-	c4_debug_printf("--- connman: sent communcation objects...\n");
 
 	c4_cspace_remove(C4_CURRENT_CSPACE, temppoint);
-	c4_debug_printf("--- connman: done!\n");
 	return true;
 }
 
@@ -86,10 +81,8 @@ bool c4rt_connman_call(c4rt_conn_t *conn, message_t *msg){
 		C4_ASSERT(check >= 0);
 		return check;
 	}
-	c4_debug_printf("--- connman call: sent... (%x)\n", conn->client_id);
 
 	bool ret = c4rt_connman_recv(conn, msg, C4RT_CONNMAN_BLOCK);
-	c4_debug_printf("--- connman call: received... (%x)\n", conn->client_id);
 	return ret;
 }
 
@@ -115,7 +108,6 @@ static c4rt_conn_t *handle_connect(c4rt_conn_server_t *serv, uint32_t temp){
 
 	// wait for request on temp endpoint
 	c4_msg_recieve(&msgbuf, temp);
-	c4_debug_printf("--- connman server: recieved request...\n");
 
 	if (msgbuf.type != C4RT_CONNMAN_CONNECT) {
 		goto error_preconn;
@@ -125,7 +117,6 @@ static c4rt_conn_t *handle_connect(c4rt_conn_server_t *serv, uint32_t temp){
 	new_client = calloc(1, sizeof(*new_client));
 	new_client->client_id = c4rt_prng_u32();
 	andtree_insert(&serv->tree, new_client);
-	c4_debug_printf("--- connman: new client %x\n", new_client->client_id);
 
 	msgbuf.type = C4RT_CONNMAN_CLIENT_ID;
 	msgbuf.data[0] = new_client->client_id;
@@ -199,13 +190,11 @@ c4rt_conn_t *c4rt_connman_server_listen( c4rt_conn_server_t *serv,
 	while (!conn) {
 		message_t msgbuf;
 
-		c4_debug_printf("--- connman server: waiting...\n");
 		c4_msg_recieve(&msgbuf, serv->server_port);
 		int temp = msgbuf.data[5];
 
 		switch (msgbuf.type) {
 			case MESSAGE_TYPE_GRANT_OBJECT:
-				c4_debug_printf("--- connman server: connect (%u)...\n", temp);
 				handle_connect(serv, temp);
 				break;
 
@@ -215,7 +204,6 @@ c4rt_conn_t *c4rt_connman_server_listen( c4rt_conn_server_t *serv,
 				break;
 
 			case C4RT_CONNMAN_NEW_MESSAGE:
-				c4_debug_printf("--- connman server: new message...\n");
 				conn = handle_new_message(serv, msg, msgbuf.data[0]);
 				break;
 

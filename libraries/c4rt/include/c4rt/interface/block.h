@@ -26,8 +26,6 @@ static inline bool block_access( uint32_t id,
                                  message_t *msg,
                                  c4_mem_object_t *buffer )
 {
-	c4_debug_printf( "--- thread %u: block: trying to access\n", c4_get_id());
-
 	bool error = BLOCK_MSG_NO_ERROR;
 	uint32_t temppoint = c4_send_temp_endpoint(id);
 

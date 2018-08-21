@@ -48,6 +48,9 @@ typedef struct display {
 	// font dimensions
 	unsigned width;
 	unsigned height;
+
+	// framebuffer memory capability
+	uint32_t buf_cap;
 } display_t;
 
 void framebuffer_init( display_t *state );

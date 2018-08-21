@@ -185,24 +185,23 @@ int c4_phys_frame_split( uint32_t frame, size_t offset ){
 	return ret;
 }
 
-void *c4_request_physical( uintptr_t virt,
-                           uintptr_t physical,
-                           unsigned size,
-                           unsigned permissions )
+uint32_t c4_request_physical( uintptr_t virt,
+                              uintptr_t physical,
+                              unsigned size,
+                              unsigned permissions )
 {
-	int frame = c4_phys_frame_create(physical, size, 0 /* TODO: C4_CONTEXT */);
+	int32_t frame = c4_phys_frame_create(physical, size, 0 /* TODO: C4_CONTEXT */);
 	if (frame < 0) {
-		return NULL;
+		return 0;
 	}
 
 	int k = c4_addrspace_map(C4_CURRENT_ADDRSPACE, frame, virt, permissions);
-	c4_cspace_remove(C4_CURRENT_CSPACE, frame);
 
 	if (k < 0) {
-		return NULL;
+		return 0;
 	}
 
-	return (void *)virt;
+	return frame;
 }
 
 // Deprecated

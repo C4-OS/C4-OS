@@ -75,10 +75,10 @@ void framebuffer_init( display_t *state ){
 	c4_debug_printf( "--- display: text buffer of %ux%u\n",
 		state->width, state->height );
 
-	c4_request_physical( 0xfb000000,
-	                     c4_bootinfo->framebuffer.addr,
-	                     size / PAGE_SIZE + 1,
-	                     PAGE_READ | PAGE_WRITE );
+	state->buf_cap = c4_request_physical( 0xfb000000,
+	                                     c4_bootinfo->framebuffer.addr,
+	                                     size / PAGE_SIZE + 1,
+	                                     PAGE_READ | PAGE_WRITE );
 
 	uint32_t *fb = (void *)0xfb000000;
 

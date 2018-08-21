@@ -77,10 +77,10 @@ DEPRECATED int c4_mem_grant_to( unsigned thread_id, void *from, void *to,
                      unsigned size, unsigned permissions );
 
 // TODO: note in docs that size is in pages
-void *c4_request_physical( uintptr_t virt,
-                           uintptr_t physical,
-                           unsigned size,
-                           unsigned permissions );
+uint32_t c4_request_physical( uintptr_t virt,
+                              uintptr_t physical,
+                              unsigned size,
+                              unsigned permissions );
 
 DEPRECATED void  c4_dump_maps( unsigned thread );
 

@@ -105,6 +105,32 @@ void handle_get_event(uint32_t port, message_t *request){
 	c4_msg_send(&msg, port);
 }
 
+static uint32_t clients[1024];
+static unsigned num_clients;
+
+void event_thread(void) {
+	while (true) {
+		keyboard_event_t event;
+		get_event(&event);
+
+		message_t msg = {
+			.type = KEYBOARD_MSG_EVENT,
+			.data = {
+				event.character,
+				event.modifiers,
+				event.scancode,
+				event.event,
+			},
+		};
+
+		for (unsigned k = 0; k < num_clients; k++) {
+			c4_msg_send_async(&msg, clients[k]);
+		}
+	}
+
+	c4_exit();
+}
+
 void _start(uintptr_t nameserv) {
 	int serv_port = c4_msg_create_sync();
 	interrupt_queue = c4_msg_create_async();
@@ -115,7 +141,15 @@ void _start(uintptr_t nameserv) {
 	// the driver had a chance to handle it
 	c4_in_byte(0x60);
 	c4_interrupt_subscribe(INTERRUPT_KEYBOARD, interrupt_queue);
-	//c4_msg_send( &msg, 0 );
+
+	static uint8_t worker_stack[PAGE_SIZE];
+
+	// TODO: make a library function to handle all of this
+	uint32_t tid = c4_create_thread(event_thread, worker_stack + PAGE_SIZE, 0);
+	c4_set_capspace(tid, C4_CURRENT_CSPACE);
+	c4_set_addrspace(tid, C4_CURRENT_ADDRSPACE);
+	c4_set_pager(tid, C4_PAGER);;
+	c4_continue_thread(tid);
 
 	while ( true ){
 		message_t msg;
@@ -125,18 +159,9 @@ void _start(uintptr_t nameserv) {
 			continue;
 		}
 
-		uint32_t temp = msg.data[5];
-		c4_msg_recieve(&msg, temp);
-
-		switch (msg.type) {
-			case KEYBOARD_MSG_GET_EVENT:
-				handle_get_event(temp, &msg);
-				break;
-
-			default:
-				break;
-		}
-
-		c4_cspace_remove(C4_CURRENT_CSPACE, temp);
+		C4_ASSERT(msg.data[0] == CAP_TYPE_IPC_ASYNC_ENDPOINT);
+		// TODO: locking
+		clients[num_clients++] = msg.data[5];
+		c4_debug_printf("--- keyboard: now have %u clients\n", num_clients);
 	}
 }

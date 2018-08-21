@@ -5,6 +5,10 @@ $(BUILD)/bin/keyboard: $(PROGRAM_ROOT)/initprogs/src/keyboard.o $(initprog-libs)
 	@echo CC $^ -o $@
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
 
+$(BUILD)/bin/ps2mouse: $(PROGRAM_ROOT)/initprogs/src/ps2mouse.o $(initprog-libs)
+	@echo CC $^ -o $@
+	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+
 $(BUILD)/bin/test: $(PROGRAM_ROOT)/initprogs/src/test.o $(initprog-libs)
 	@echo CC $^ -o $@
 	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
@@ -38,6 +42,11 @@ $(BUILD)/bin/clibtest: $(PROGRAM_ROOT)/initprogs/src/clibtest.o $(initprog-libs)
 initprogs-keyboard-clean:
 	rm -f $(BUILD)/bin/keyboard
 	rm -f $(PROGRAM_ROOT)/initprogs/src/keyboard.o
+
+.PHONY: initprogs-ps2mouse-clean
+initprogs-ps2mouse-clean:
+	rm -f $(BUILD)/bin/ps2mouse
+	rm -f $(PROGRAM_ROOT)/initprogs/src/ps2mouse.o
 
 .PHONY: initprogs-test-clean
 initprogs-test-clean:
@@ -76,6 +85,7 @@ initprogs-clibtest-clean:
 
 
 ALL_PROGRAMS += $(BUILD)/bin/keyboard
+ALL_PROGRAMS += $(BUILD)/bin/ps2mouse
 ALL_PROGRAMS += $(BUILD)/bin/test
 ALL_PROGRAMS += $(BUILD)/bin/pci
 ALL_PROGRAMS += $(BUILD)/bin/faulter
@@ -84,6 +94,7 @@ ALL_PROGRAMS += $(BUILD)/bin/alloctest
 ALL_PROGRAMS += $(BUILD)/bin/atatest
 ALL_PROGRAMS += $(BUILD)/bin/clibtest
 ALL_CLEAN    += initprogs-keyboard-clean
+ALL_CLEAN    += initprogs-ps2mouse-clean
 ALL_CLEAN    += initprogs-test-clean
 ALL_CLEAN    += initprogs-pci-clean
 ALL_CLEAN    += initprogs-faulter-clean

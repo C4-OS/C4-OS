@@ -30,6 +30,7 @@ INITFS_PROGRAMS += $(BUILD)/bin/ext2fs
 INITFS_PROGRAMS += $(BUILD)/bin/initsys
 
 INITSYS_PROGRAMS += $(BUILD)/bin/keyboard
+INITSYS_PROGRAMS += $(BUILD)/bin/ps2mouse
 INITSYS_PROGRAMS += $(BUILD)/bin/display
 INITSYS_PROGRAMS += $(BUILD)/bin/forth
 INITSYS_PROGRAMS += $(BUILD)/bin/clibtest

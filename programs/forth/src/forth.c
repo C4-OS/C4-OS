@@ -9,7 +9,8 @@
 
 static unsigned display = 0;
 //static unsigned keyboard = 0;
-static keyboard_t keyboard;
+//static keyboard_t keyboard;
+static uint32_t keyboard;
 
 static void putchar( char c ){
 	console_put_char( display, c );
@@ -31,7 +32,17 @@ static char *read_keyboard( char *buf, unsigned n ){
 retry:
 		{
 			keyboard_event_t ev;
+			message_t msg;
+			c4rt_peripheral_wait_event(&msg, keyboard);
+
+			if (msg.type != KEYBOARD_MSG_EVENT)
+				goto retry;
+
+			keyboard_parse_event(&msg, &ev);
+			/*
 			keyboard_get_event(&keyboard, &ev);
+			*/
+
 
 			if (keyboard_event_is_modifier(&ev))
 				goto retry;
@@ -147,7 +158,8 @@ int main( int argc, char *argv[], char *envp[] ){
 		kbd_port = nameserver_lookup(nameserver, "/dev/keyboard");
 	}
 
-	keyboard_connect(&keyboard, kbd_port);
+	keyboard = c4_msg_create_async();
+	c4rt_peripheral_connect(kbd_port, keyboard);
 
 	minift_vm_t foo;
 	minift_stack_t data_stack = {
@@ -173,6 +185,6 @@ int main( int argc, char *argv[], char *envp[] ){
 	add_c4_archives(&foo);
 	minift_run(&foo);
 
-	keyboard_disconnect(&keyboard);
+	c4rt_peripheral_disconnect(keyboard);
 	return 0;
 }

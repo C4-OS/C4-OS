@@ -120,8 +120,8 @@ void dispatch(uint8_t *packet) {
 	}
 
 	ev.flags = packet[0] & 0x7;
-	ev.x = (packet[0] & 0x10)? ~packet[1] : packet[1];
-	ev.y = (packet[0] & 0x20)? ~packet[2] : packet[2];
+	ev.x = (packet[0] & 0x10)? -(255 - packet[1]) : packet[1];
+	ev.y = (packet[0] & 0x20)? -(255 - packet[2]) : packet[2];
 
 	message_t msg = {
 		.type = MOUSE_MSG_EVENT,

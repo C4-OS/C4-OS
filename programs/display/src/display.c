@@ -76,8 +76,8 @@ static void send_framebuf_info(message_t *msg, display_t *state, uint32_t port){
 	message_t ret = {
 		.type = FRAMEBUFFER_MSG_INFO,
 		.data = {
-			state->x,
-			state->y,
+			c4_bootinfo->framebuffer.width,
+			c4_bootinfo->framebuffer.height,
 			32,
 		},
 	};

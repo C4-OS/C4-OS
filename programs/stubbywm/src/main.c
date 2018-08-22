@@ -13,6 +13,35 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+static void reset_updates(wm_t *wm) {
+	wm->updates.lower.x = wm->info.width;
+	wm->updates.lower.y = wm->info.height;
+
+	wm->updates.upper.x = 0;
+	wm->updates.upper.y = 0;
+}
+
+static void set_full_update(wm_t *wm) {
+	wm->updates.lower.x = 0;
+	wm->updates.lower.y = 0;
+
+	wm->updates.upper.x = wm->info.width;
+	wm->updates.upper.y = wm->info.height;
+}
+
+static void notify_update(wm_t *wm, stubby_point_t pt) {
+	if (pt.x < wm->updates.lower.x) wm->updates.lower.x = pt.x;
+	if (pt.y < wm->updates.lower.y) wm->updates.lower.y = pt.y;
+	if (pt.x > wm->updates.upper.x) wm->updates.upper.x = pt.x;
+	if (pt.y > wm->updates.upper.y) wm->updates.upper.y = pt.y;
+
+	if (wm->updates.upper.x > wm->info.width)
+		wm->updates.upper.x = wm->info.width;
+
+	if (wm->updates.upper.y > wm->info.height)
+		wm->updates.upper.y = wm->info.height;
+}
+
 inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
 	if (x < 0 || y < 0){
 		return;
@@ -36,20 +65,24 @@ inline void draw_rect(wm_t *state, stubby_rect_t *rect, uint32_t color) {
 }
 
 static void draw_mouse(wm_t *state, uint32_t color) {
-	/*
-	stubby_rect_t r;
-
-	r.coord = state->mouse;
-	r.height = r.width = 16;
-
-	draw_rect(state, &r, color);
-	*/
 	ppm_draw(&state->mouse_cursor, state, state->mouse);
 }
 
 static void draw_background(wm_t *state) {
+	/*
 	for (unsigned y = 0; y < state->info.height; y++) {
 		for (unsigned x = 0; x < state->info.width; x++) {
+			uint32_t pixel = 0x202000 | (x ^ y);
+			draw_pixel(state, x, y, pixel);
+		}
+	}
+	*/
+
+	for (unsigned y = state->updates.lower.y; y < state->updates.upper.y; y++) {
+		for (unsigned x = state->updates.lower.x;
+		     x < state->updates.upper.x;
+		     x++)
+		{
 			uint32_t pixel = 0x202000 | (x ^ y);
 			draw_pixel(state, x, y, pixel);
 		}
@@ -57,6 +90,7 @@ static void draw_background(wm_t *state) {
 }
 
 // TODO: merge these into c4rt at some point, these are pretty useful
+/*
 static void page_copy(void *dest, void *src) {
 	uint32_t *a = dest;
 	uint32_t *b = src;
@@ -76,14 +110,42 @@ static void pages_copy(void *dest, void *src, unsigned pages) {
 		b += PAGE_SIZE;
 	}
 }
+*/
 
 static void draw_framebuffer(wm_t *state) {
-	unsigned size = (state->info.height * state->info.width * 4);
-	unsigned pages = pager_size_to_pages(size);
-	pages_copy(state->framebuffer, state->buffer.vaddrptr, pages);
+	if (state->updates.lower.y > state->updates.upper.y) {
+		/*
+		unsigned size = (state->info.height * state->info.width * 4);
+		unsigned pages = pager_size_to_pages(size);
+		pages_copy(state->framebuffer, state->buffer.vaddrptr, pages);
+		*/
+		return;
+	}
+
+	uint32_t *fbuf = (void*)state->framebuffer;
+	uint32_t *dbuf = (void*)state->buffer.vaddrptr;
+
+	for (unsigned y = state->updates.lower.y; y < state->updates.upper.y; y++){
+		for (unsigned x = state->updates.lower.x;
+		     x < state->updates.upper.x;
+		     x++)
+		{
+			unsigned index = (y * state->info.width) + x;
+			fbuf[index] = dbuf[index];
+		}
+	}
 }
 
 static void handle_mouse(wm_t *state, mouse_event_t *ev) {
+	stubby_point_t offset;
+
+	offset = state->mouse;
+	offset.x += state->mouse_cursor.width;
+	offset.y += state->mouse_cursor.height;
+
+	notify_update(state, state->mouse);
+	notify_update(state, offset);
+
 	state->mouse.x += ev->x;
 	state->mouse.y -= ev->y;
 
@@ -95,6 +157,13 @@ static void handle_mouse(wm_t *state, mouse_event_t *ev) {
 
 	if (state->mouse.y >= state->info.height)
 		state->mouse.y = state->info.height - 1;
+
+	offset = state->mouse;
+	offset.x += state->mouse_cursor.width;
+	offset.y += state->mouse_cursor.height;
+
+	notify_update(state, state->mouse);
+	notify_update(state, offset);
 }
 
 static void handle_keyboard(wm_t *state, keyboard_event_t *ev) {
@@ -106,15 +175,19 @@ static void event_loop(wm_t *state) {
 	keyboard_event_t kev = {};
 	mouse_event_t mev = {};
 
+	//reset_updates(state);
+	set_full_update(state);
+
 	while (true) {
 		draw_background(state);
 		draw_mouse(state,
 		           0x800080
 		           | ((mev.flags & MOUSE_FLAG_LEFT)?   0xff0000 : 0)
 		           | ((mev.flags & MOUSE_FLAG_RIGHT)?  0x0000ff : 0)
-		           | ((mev.flags & MOUSE_FLAG_MIDDLE)? 0x00ff00 : 0)
-						   );
+		           | ((mev.flags & MOUSE_FLAG_MIDDLE)? 0x00ff00 : 0));
 		draw_framebuffer(state);
+		reset_updates(state);
+
 		c4rt_peripheral_wait_event(&msg, state->peripherals);
 
 		switch (msg.type) {

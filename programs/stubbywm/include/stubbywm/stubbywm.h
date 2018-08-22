@@ -23,9 +23,6 @@ typedef struct window {
 } window_t;
 
 typedef struct wm {
-	uint32_t peripherals;
-	stubby_point_t mouse;
-
 	c4_mem_object_t buffer;
 
 	uint32_t buf_cap;
@@ -33,7 +30,14 @@ typedef struct wm {
 	uint8_t *framebuffer;
 	framebuffer_info_t info;
 
+	uint32_t peripherals;
+	stubby_point_t mouse;
 	ppm_t mouse_cursor;
+
+	struct {
+		stubby_point_t lower;
+		stubby_point_t upper;
+	} updates;
 } wm_t;
 
 void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel);

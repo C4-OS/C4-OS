@@ -1,6 +1,8 @@
 #ifndef _C4OS_STUBBYWM_H
 #define _C4OS_STUBBYWM_H 1
 
+enum { MAX_UPDATES = 32, };
+
 typedef struct wm wm_t;
 typedef struct point stubby_point_t;
 
@@ -22,6 +24,11 @@ typedef struct window {
 	int level;
 } window_t;
 
+typedef struct wm_update {
+	stubby_point_t lower;
+	stubby_point_t upper;
+} wm_update_t;
+
 typedef struct wm {
 	c4_mem_object_t buffer;
 
@@ -34,10 +41,8 @@ typedef struct wm {
 	stubby_point_t mouse;
 	ppm_t mouse_cursor;
 
-	struct {
-		stubby_point_t lower;
-		stubby_point_t upper;
-	} updates;
+	wm_update_t updates[MAX_UPDATES];
+	unsigned num_updates;
 } wm_t;
 
 void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel);

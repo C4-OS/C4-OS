@@ -14,32 +14,49 @@
 #include <stdbool.h>
 
 static void reset_updates(wm_t *wm) {
-	wm->updates.lower.x = wm->info.width;
-	wm->updates.lower.y = wm->info.height;
+	wm->num_updates = 0;
+}
 
-	wm->updates.upper.x = 0;
-	wm->updates.upper.y = 0;
+static wm_update_t *alloc_update(wm_t *wm) {
+	wm_update_t *ret = wm->updates + wm->num_updates;
+	wm->num_updates++;
+
+	// TODO: just do a full update if the maximum number of updates is reached
+	C4_ASSERT(wm->num_updates < MAX_UPDATES);
+	wm->num_updates %= MAX_UPDATES;
+
+	return ret;
 }
 
 static void set_full_update(wm_t *wm) {
-	wm->updates.lower.x = 0;
-	wm->updates.lower.y = 0;
+	wm_update_t *up = alloc_update(wm);
 
-	wm->updates.upper.x = wm->info.width;
-	wm->updates.upper.y = wm->info.height;
+	up->lower.x = 0;
+	up->lower.y = 0;
+
+	up->upper.x = wm->info.width;
+	up->upper.y = wm->info.height;
 }
 
-static void notify_update(wm_t *wm, stubby_point_t pt) {
-	if (pt.x < wm->updates.lower.x) wm->updates.lower.x = pt.x;
-	if (pt.y < wm->updates.lower.y) wm->updates.lower.y = pt.y;
-	if (pt.x > wm->updates.upper.x) wm->updates.upper.x = pt.x;
-	if (pt.y > wm->updates.upper.y) wm->updates.upper.y = pt.y;
+static bool point_less_than(stubby_point_t *a, stubby_point_t *b) {
+	return a->y < b->y || (a->y == b->y && a->x < b->x);
+}
 
-	if (wm->updates.upper.x > wm->info.width)
-		wm->updates.upper.x = wm->info.width;
+static void update_region(wm_t *wm, stubby_point_t *a, stubby_point_t *b) {
+	wm_update_t *up = alloc_update(wm);
 
-	if (wm->updates.upper.y > wm->info.height)
-		wm->updates.upper.y = wm->info.height;
+	up->lower = point_less_than(a, b)? *a : *b;
+	up->upper = point_less_than(a, b)? *b : *a;
+
+	// sanity checking
+	if (up->lower.x < 0) up->lower.x = 0;
+	if (up->lower.y < 0) up->lower.y = 0;
+
+	if (up->upper.x > wm->info.width)
+		up->upper.x = wm->info.width;
+
+	if (up->upper.y > wm->info.height)
+		up->upper.y = wm->info.height;
 }
 
 inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
@@ -69,22 +86,14 @@ static void draw_mouse(wm_t *state, uint32_t color) {
 }
 
 static void draw_background(wm_t *state) {
-	/*
-	for (unsigned y = 0; y < state->info.height; y++) {
-		for (unsigned x = 0; x < state->info.width; x++) {
-			uint32_t pixel = 0x202000 | (x ^ y);
-			draw_pixel(state, x, y, pixel);
-		}
-	}
-	*/
+	for (unsigned k = 0; k < state->num_updates; k++) {
+		wm_update_t up = state->updates[k];
 
-	for (unsigned y = state->updates.lower.y; y < state->updates.upper.y; y++) {
-		for (unsigned x = state->updates.lower.x;
-		     x < state->updates.upper.x;
-		     x++)
-		{
-			uint32_t pixel = 0x202000 | (x ^ y);
-			draw_pixel(state, x, y, pixel);
+		for (unsigned y = up.lower.y; y < up.upper.y; y++) {
+			for (unsigned x = up.lower.x; x < up.upper.x; x++) {
+				uint32_t pixel = 0x202000 | (x ^ y);
+				draw_pixel(state, x, y, pixel);
+			}
 		}
 	}
 }
@@ -113,25 +122,27 @@ static void pages_copy(void *dest, void *src, unsigned pages) {
 */
 
 static void draw_framebuffer(wm_t *state) {
-	if (state->updates.lower.y > state->updates.upper.y) {
-		/*
-		unsigned size = (state->info.height * state->info.width * 4);
-		unsigned pages = pager_size_to_pages(size);
-		pages_copy(state->framebuffer, state->buffer.vaddrptr, pages);
-		*/
+	/*
+	   unsigned size = (state->info.height * state->info.width * 4);
+	   unsigned pages = pager_size_to_pages(size);
+	   pages_copy(state->framebuffer, state->buffer.vaddrptr, pages);
+	   */
+
+	if (state->num_updates == 0) {
 		return;
 	}
 
 	uint32_t *fbuf = (void*)state->framebuffer;
 	uint32_t *dbuf = (void*)state->buffer.vaddrptr;
 
-	for (unsigned y = state->updates.lower.y; y < state->updates.upper.y; y++){
-		for (unsigned x = state->updates.lower.x;
-		     x < state->updates.upper.x;
-		     x++)
-		{
-			unsigned index = (y * state->info.width) + x;
-			fbuf[index] = dbuf[index];
+	for (unsigned k = 0; k < state->num_updates; k++) {
+		wm_update_t up = state->updates[k];
+
+		for (unsigned y = up.lower.y; y < up.upper.y; y++){
+			for (unsigned x = up.lower.x; x < up.upper.x; x++) {
+				unsigned index = (y * state->info.width) + x;
+				fbuf[index] = dbuf[index];
+			}
 		}
 	}
 }
@@ -143,8 +154,7 @@ static void handle_mouse(wm_t *state, mouse_event_t *ev) {
 	offset.x += state->mouse_cursor.width;
 	offset.y += state->mouse_cursor.height;
 
-	notify_update(state, state->mouse);
-	notify_update(state, offset);
+	update_region(state, &state->mouse, &offset);
 
 	state->mouse.x += ev->x;
 	state->mouse.y -= ev->y;
@@ -162,8 +172,7 @@ static void handle_mouse(wm_t *state, mouse_event_t *ev) {
 	offset.x += state->mouse_cursor.width;
 	offset.y += state->mouse_cursor.height;
 
-	notify_update(state, state->mouse);
-	notify_update(state, offset);
+	update_region(state, &state->mouse, &offset);
 }
 
 static void handle_keyboard(wm_t *state, keyboard_event_t *ev) {
@@ -175,7 +184,7 @@ static void event_loop(wm_t *state) {
 	keyboard_event_t kev = {};
 	mouse_event_t mev = {};
 
-	//reset_updates(state);
+	reset_updates(state);
 	set_full_update(state);
 
 	while (true) {
@@ -209,6 +218,7 @@ static void event_loop(wm_t *state) {
 
 int main(int argc, char *argv[]) {
 	wm_t state;
+	memset(&state, 0, sizeof(state));
 
 	// initialize icons
 	ppm_load(&state.mouse_cursor, cursor_default_ppm);

@@ -4,41 +4,16 @@
 #include <c4rt/interface/keyboard.h>
 #include <c4rt/interface/mouse.h>
 #include <c4rt/interface/framebuffer.h>
+#include <c4rt/stublibc.h>
+
+#include <stubbywm/stubbywm.h>
+#include <stubbywm/mouse_icons.h>
 #include <nameserver/nameserver.h>
 
-#include <c4rt/stublibc.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct {
-	int32_t x, y;
-} stubby_point_t;
-
-typedef struct {
-	stubby_point_t coord;
-	unsigned height;
-	unsigned width;
-} stubby_rect_t;
-
-typedef struct window {
-	stubby_rect_t rect;
-
-	int level;
-} window_t;
-
-typedef struct {
-	uint32_t peripherals;
-	stubby_point_t mouse;
-
-	c4_mem_object_t buffer;
-
-	uint32_t buf_cap;
-	uint32_t buf_server;
-	uint8_t *framebuffer;
-	framebuffer_info_t info;
-} wm_t;
-
-static inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
+inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
 	if (x < 0 || y < 0){
 		return;
 	}
@@ -52,7 +27,7 @@ static inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel)
 	buf[(y * state->info.width) + x] = pixel;
 }
 
-static void draw_rect(wm_t *state, stubby_rect_t *rect, uint32_t color) {
+inline void draw_rect(wm_t *state, stubby_rect_t *rect, uint32_t color) {
 	for (unsigned y = 0; y < rect->height; y++) {
 		for (unsigned x = 0; x < rect->width; x++) {
 			draw_pixel(state, x + rect->coord.x, y + rect->coord.y, color);
@@ -61,12 +36,15 @@ static void draw_rect(wm_t *state, stubby_rect_t *rect, uint32_t color) {
 }
 
 static void draw_mouse(wm_t *state, uint32_t color) {
+	/*
 	stubby_rect_t r;
 
 	r.coord = state->mouse;
 	r.height = r.width = 16;
 
 	draw_rect(state, &r, color);
+	*/
+	ppm_draw(&state->mouse_cursor, state, state->mouse);
 }
 
 static void draw_background(wm_t *state) {
@@ -158,6 +136,9 @@ static void event_loop(wm_t *state) {
 
 int main(int argc, char *argv[]) {
 	wm_t state;
+
+	// initialize icons
+	ppm_load(&state.mouse_cursor, cursor_default_ppm);
 
 	// initialize framebuffer
 	state.buf_server = nameserver_lookup(C4_NAMESERVER, "/dev/framebuffer");

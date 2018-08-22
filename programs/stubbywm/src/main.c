@@ -17,6 +17,18 @@ static void reset_updates(wm_t *wm) {
 	wm->num_updates = 0;
 }
 
+static void normalize_point(wm_t *wm, stubby_point_t *pt) {
+	// sanity checking
+	if (pt->x < 0) pt->x = 0;
+	if (pt->y < 0) pt->y = 0;
+
+	if (pt->x > wm->info.width)
+		pt->x = wm->info.width;
+
+	if (pt->y > wm->info.height)
+		pt->y = wm->info.height;
+}
+
 static wm_update_t *alloc_update(wm_t *wm) {
 	wm_update_t *ret = wm->updates + wm->num_updates;
 	wm->num_updates++;
@@ -49,14 +61,8 @@ static void update_region(wm_t *wm, stubby_point_t *a, stubby_point_t *b) {
 	up->upper = point_less_than(a, b)? *b : *a;
 
 	// sanity checking
-	if (up->lower.x < 0) up->lower.x = 0;
-	if (up->lower.y < 0) up->lower.y = 0;
-
-	if (up->upper.x > wm->info.width)
-		up->upper.x = wm->info.width;
-
-	if (up->upper.y > wm->info.height)
-		up->upper.y = wm->info.height;
+	normalize_point(wm, &up->lower);
+	normalize_point(wm, &up->upper);
 }
 
 inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
@@ -95,6 +101,50 @@ static void draw_background(wm_t *state) {
 				draw_pixel(state, x, y, pixel);
 			}
 		}
+	}
+}
+
+static stubby_point_t rect_max_coord(wm_t *wm, stubby_rect_t *rect){
+	stubby_point_t temp = {
+		.x = rect->coord.x + rect->width,
+		.y = rect->coord.y + rect->height,
+	};
+
+	normalize_point(wm, &temp);
+	return temp;
+}
+
+static void draw_window(wm_t *state, window_t *window) {
+	for (unsigned k = 0; k < state->num_updates; k++) {
+		wm_update_t up = state->updates[k];
+
+		stubby_point_t a = window->rect.coord;
+		stubby_point_t b = rect_max_coord(state, &window->rect);
+
+		if (a.y >= up.upper.y || b.y < up.lower.y) {
+			continue;
+		}
+
+		if (a.x >= up.upper.x || b.x < up.lower.x) {
+			continue;
+		}
+
+		unsigned y_start = (a.y > up.lower.y)? a.y : up.lower.y;
+		unsigned x_start = (a.x > up.lower.x)? a.x : up.lower.x;
+
+		for (unsigned y = y_start; y < b.y && y < up.upper.y; y++) {
+			for (unsigned x = x_start; x < b.x && x < up.upper.x; x++) {
+				draw_pixel(state, x, y, window->color);
+			}
+		}
+	}
+}
+
+static void draw_windows(wm_t *state) {
+	window_node_t *node = state->winlist.start;
+
+	for (; node; node = node->next) {
+		draw_window(state, &node->window);
 	}
 }
 
@@ -147,32 +197,67 @@ static void draw_framebuffer(wm_t *state) {
 	}
 }
 
-static void handle_mouse(wm_t *state, mouse_event_t *ev) {
+static void update_mouse_region(wm_t *wm) {
 	stubby_point_t offset;
 
-	offset = state->mouse;
-	offset.x += state->mouse_cursor.width;
-	offset.y += state->mouse_cursor.height;
+	offset = wm->mouse;
+	offset.x += wm->mouse_cursor.width;
+	offset.y += wm->mouse_cursor.height;
 
-	update_region(state, &state->mouse, &offset);
+	update_region(wm, &wm->mouse, &offset);
+}
 
-	state->mouse.x += ev->x;
-	state->mouse.y -= ev->y;
+static void update_window_region(wm_t *wm, window_t *window) {
+	stubby_point_t a = window->rect.coord;
+	stubby_point_t b = rect_max_coord(wm, &window->rect);
 
-	if (state->mouse.x < 0) state->mouse.x = 0;
-	if (state->mouse.y < 0) state->mouse.y = 0;
+	update_region(wm, &a, &b);
+}
 
-	if (state->mouse.x >= state->info.width)
-		state->mouse.x = state->info.width - 1;
+static void handle_mouse(wm_t *wm, mouse_event_t *ev) {
+	update_mouse_region(wm);
 
-	if (state->mouse.y >= state->info.height)
-		state->mouse.y = state->info.height - 1;
+	window_node_t *node = wm->winlist.end;
 
-	offset = state->mouse;
-	offset.x += state->mouse_cursor.width;
-	offset.y += state->mouse_cursor.height;
+	for (; node; node = node->prev) {
+		stubby_point_t a = node->window.rect.coord;
+		stubby_point_t b = rect_max_coord(wm, &node->window.rect);
 
-	update_region(state, &state->mouse, &offset);
+		if (wm->mouse.x >= a.x && wm->mouse.y >= a.y
+		 && wm->mouse.x <  b.x && wm->mouse.y <  b.y)
+		{
+
+			if (ev->flags & MOUSE_FLAG_LEFT) {
+				window_t win = node->window;
+
+				update_window_region(wm, &win);
+				window_list_remove(&wm->winlist, node);
+				window_list_insert(&wm->winlist, &win);
+				update_window_region(wm, &win);
+				break;
+			}
+
+			else if (ev->flags & MOUSE_FLAG_RIGHT) {
+				update_window_region(wm, &node->window);
+
+				// TODO: move this into window_set_pos()
+				stubby_point_t pt = node->window.rect.coord;
+				pt.x += ev->x;
+				pt.y -= ev->y;
+				normalize_point(wm, &pt);
+				window_set_pos(&node->window, pt.x, pt.y);
+
+				update_window_region(wm, &node->window);
+				break;
+			}
+		}
+	}
+
+	wm->mouse.x += ev->x;
+	wm->mouse.y -= ev->y;
+
+	normalize_point(wm, &wm->mouse);
+	update_mouse_region(wm);
 }
 
 static void handle_keyboard(wm_t *state, keyboard_event_t *ev) {
@@ -189,6 +274,7 @@ static void event_loop(wm_t *state) {
 
 	while (true) {
 		draw_background(state);
+		draw_windows(state);
 		draw_mouse(state,
 		           0x800080
 		           | ((mev.flags & MOUSE_FLAG_LEFT)?   0xff0000 : 0)
@@ -262,6 +348,23 @@ int main(int argc, char *argv[]) {
 
 	c4rt_peripheral_connect(keyboard, state.peripherals);
 	c4rt_peripheral_connect(mouse, state.peripherals);
+
+	// create some dummy windows
+	window_t w = window_create(256, 256);
+	window_set_pos(&w, 128, 128);
+	window_list_insert(&state.winlist, &w);
+
+	w = window_create(192, 192);
+	window_set_pos(&w, 256, 256);
+	window_list_insert(&state.winlist, &w);
+
+	w = window_create(64, 256);
+	window_set_pos(&w, 384, 384);
+	window_list_insert(&state.winlist, &w);
+
+	w = window_create(256, 128);
+	window_set_pos(&w, 512, 512);
+	window_list_insert(&state.winlist, &w);
 
 	event_loop(&state);
 

@@ -1,10 +1,10 @@
-skeleton-prog-libs = $(BUILD)/libs/c4rt.a
+skeleton-prog-libs =
 skeleton-prog-src  = $(wildcard $(PROGRAM_ROOT)/skeleton-prog/src/*.c)
 skeleton-prog-obj  = $(skeleton-prog-src:.c=.o)
 
 $(BUILD)/bin/skeleton-prog: $(skeleton-prog-libs) $(skeleton-prog-obj)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(skeleton-prog-libs)
+	@$(C4_CC) $^ -o $@ $(skeleton-prog-libs) $(C4_CFLAGS) 
 
 .PHONY: skeleton-prog-clean
 skeleton-prog-clean:

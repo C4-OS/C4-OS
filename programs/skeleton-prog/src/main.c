@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-void _start( uintptr_t display ){
+int main(int argc, char *argv[]){
 	c4_debug_printf( "--- skeleton-prog: hello, world! thread %u\n",
 	                 c4_get_id());
 

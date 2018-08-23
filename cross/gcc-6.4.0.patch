@@ -41,10 +41,10 @@ diff -ruN old-gcc/gcc/config/c4os.h gcc-6.4.0/gcc/config/c4os.h
 +#define TARGET_C4OS 1
 +
 +#undef LIB_SPEC
-+#define LIB_SPEC "-lc4rt -lc"
++#define LIB_SPEC "-lc"
 +
 +#undef STARTFILE_SPEC
-+#define STARTFILE_SPEC "c4rt0.o%s crti.o%s crtbegin.o%s"
++#define STARTFILE_SPEC "crt0.o%s crti.o%s crtbegin.o%s"
 +
 +#undef ENDFILE_SPEC
 +#define ENDFILE_SPEC "crtend.o%s crtn.o%s"

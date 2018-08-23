@@ -1,10 +1,10 @@
-nameserver-libs = $(BUILD)/libs/c4rt.a
+nameserver-libs =
 nameserver-src  = $(wildcard $(PROGRAM_ROOT)/nameserver/src/*.c)
 nameserver-obj  = $(nameserver-src:.c=.o)
 
 $(BUILD)/bin/nameserver: $(nameserver-libs) $(nameserver-obj)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(nameserver-libs)
+	@$(C4_CC) $^ -o $@ $(nameserver-libs) $(C4_CFLAGS) 
 
 .PHONY: nameserver-clean
 nameserver-clean:

@@ -131,11 +131,11 @@ void event_thread(void) {
 	c4_exit();
 }
 
-void _start(uintptr_t nameserv) {
+int main(int argc, char *argv[]){
 	int serv_port = c4_msg_create_sync();
 	interrupt_queue = c4_msg_create_async();
 
-	nameserver_bind(nameserv, "/dev/keyboard", serv_port);
+	nameserver_bind(C4_NAMESERVER, "/dev/keyboard", serv_port);
 
 	// read input port in case there was a keypress interrupt before
 	// the driver had a chance to handle it

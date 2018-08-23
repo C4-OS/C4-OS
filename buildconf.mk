@@ -15,8 +15,7 @@ INTERFACE_INCLUDE = -I$(PWD)
 C4_CC     = $(CROSS)gcc
 C4_LD     = $(CROSS)ld
 C4_CXX    = $(CROSS)g++
-C4_CFLAGS = -Wall -g -O2 -ffreestanding -nostdlib -nodefaultlibs \
-            -nostartfiles -fno-builtin \
+C4_CFLAGS = -Wall -g \
             $(KERNEL_INCLUDE) $(LIBRARY_INCLUDE) $(PROGRAM_INCLUDE) \
 			$(INTERFACE_INCLUDE)
 

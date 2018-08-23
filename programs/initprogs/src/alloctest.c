@@ -8,7 +8,7 @@ enum {
 	ALLOC_ITERS      = 32,
 };
 
-void _start( unsigned long nameserver ){
+int main(int argc, char *argv[]){
 	c4a_heap_init( &heapy, 0xbeef0000 );
 
 	unsigned **test = c4a_alloc( &heapy, sizeof( unsigned *[ALLOC_ITERS] ));

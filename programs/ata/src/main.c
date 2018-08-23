@@ -39,11 +39,8 @@ void ide_pio_write( ide_device_t *device,
 
 void ata_handle_access( uint32_t endpoint, message_t *msg );
 
-void _start( uintptr_t nameserver ){
-	//int serv_port = c4_msg_create_sync();
-
-	//nameserver_bind( nameserver, "/dev/ata", serv_port );
-	nameserver_bind( nameserver, "/dev/ata", C4_SERV_PORT );
+int main(int argc, char *argv[]) {
+	nameserver_bind(C4_NAMESERVER, "/dev/ata", C4_SERV_PORT);
 	c4_debug_printf( "--- ata: hello, world! thread %u\n", c4_get_id());
 
 	ide_init();
@@ -77,7 +74,7 @@ void _start( uintptr_t nameserver ){
 		c4_cspace_remove( C4_CURRENT_CSPACE, obj );
 	}
 
-	c4_exit();
+	return 0;
 }
 
 void ata_handle_access( uint32_t endpoint, message_t *request ){

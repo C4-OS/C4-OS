@@ -22,4 +22,4 @@ void *calloc( size_t members, size_t size ){
 }
 
 // TODO: implement realloc()
-void realloc( void *ptr, size_t size );
+void *realloc( void *ptr, size_t size );

@@ -6,7 +6,7 @@
 void *malloc( size_t size );
 void free( void *ptr );
 void *calloc( size_t members, size_t size );
-void realloc( void *ptr, size_t size );
+void *realloc( void *ptr, size_t size );
 
 char *getenv(const char *name);
 void abort(void);

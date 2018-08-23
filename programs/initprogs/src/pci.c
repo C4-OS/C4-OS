@@ -86,14 +86,16 @@ typedef struct pci_device {
 	bool valid;
 } pci_device_t;
 
-static void putchar( char c ){
-	console_put_char( display, c );
+// TODO: remove these functions
+static int putchar( int c ){
+	//console_put_char( display, c );
+	c4_debug_putchar(c);
+	return 0;
 }
 
-static void puts( const char *s ){
-	for ( ; *s; s++ ){
-		putchar(*s);
-	}
+static int puts( const char *s ){
+	c4_debug_puts(s);
+	return 0;
 }
 
 static void print_num( unsigned n ){
@@ -270,9 +272,7 @@ static pci_device_t pci_lookup( uint16_t vendor_id, uint16_t device_id ){
 	return pci_invalid_device( );
 }
 
-void _start( unsigned long ndisplay ){
-	display = ndisplay;
-
+int main(int argc, char *argv[]) {
 	puts( "hello, pci at thread " );
 	print_num( c4_get_id( ));
 	puts( "\n" );

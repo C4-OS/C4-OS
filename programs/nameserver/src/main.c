@@ -61,7 +61,7 @@ void handle_lookup( uint32_t responseq, unsigned hash ){
 	c4_cspace_remove(C4_CURRENT_CSPACE, responseq);
 }
 
-void _start( uintptr_t display ){
+int main(int argc, char *argv[]){
 	while ( true ){
 		message_t msg;
 		int32_t obj;
@@ -103,5 +103,5 @@ void _start( uintptr_t display ){
 		}
 	}
 
-	c4_exit();
+	return 0;
 }

@@ -35,7 +35,7 @@ enum {
 void *malloc( size_t size );
 void free( void *ptr );
 void *calloc( size_t members, size_t size );
-void realloc( void *ptr, size_t size );
+void *realloc( void *ptr, size_t size );
 
 // file functions
 typedef struct c_filestruct {

@@ -1,41 +1,41 @@
-initprog-libs = $(BUILD)/libs/c4rt.a $(BUILD)/libs/miniforth.a
+initprog-libs = $(BUILD)/lib/miniforth.a
 
 
 $(BUILD)/bin/keyboard: $(PROGRAM_ROOT)/initprogs/src/keyboard.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/ps2mouse: $(PROGRAM_ROOT)/initprogs/src/ps2mouse.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/test: $(PROGRAM_ROOT)/initprogs/src/test.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/pci: $(PROGRAM_ROOT)/initprogs/src/pci.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/faulter: $(PROGRAM_ROOT)/initprogs/src/faulter.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/ipcbench: $(PROGRAM_ROOT)/initprogs/src/ipcbench.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/alloctest: $(PROGRAM_ROOT)/initprogs/src/alloctest.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/atatest: $(PROGRAM_ROOT)/initprogs/src/atatest.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 $(BUILD)/bin/clibtest: $(PROGRAM_ROOT)/initprogs/src/clibtest.o $(initprog-libs)
 	@echo CC $^ -o $@
-	@$(C4_CC) $(C4_CFLAGS) $^ -o $@ $(initprog-libs)
+	@$(C4_CC) $^ -o $@ $(initprog-libs) $(C4_CFLAGS) 
 
 
 .PHONY: initprogs-keyboard-clean

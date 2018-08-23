@@ -95,7 +95,7 @@ static void send_framebuffer(message_t *msg, display_t *state, uint32_t port){
 	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
 }
 
-void _start( uintptr_t nameserver ){
+int main(int argc, char *argv[]){
 	message_t msg;
 	display_t state;
 	int serv_port = c4_msg_create_sync();
@@ -104,13 +104,13 @@ void _start( uintptr_t nameserver ){
 		framebuffer_init( &state );
 		// TODO: consider splitting console and framebuffer programs, having both
 		//       managed by the same program is convenient for now though
-		nameserver_bind( nameserver, "/dev/framebuffer", serv_port );
+		nameserver_bind( C4_NAMESERVER, "/dev/framebuffer", serv_port );
 
 	} else {
 		textbuffer_init( &state );
 	}
 
-	nameserver_bind( nameserver, "/dev/console", serv_port );
+	nameserver_bind( C4_NAMESERVER, "/dev/console", serv_port );
 
 	while ( true ){
 		uint32_t temp = 0;

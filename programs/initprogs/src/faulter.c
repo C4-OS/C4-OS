@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-void _start( void *data ){
+int main(int argc, char *argv[]){
 	volatile unsigned *foo = (unsigned *)0xabc;
 
 	for (;;){

@@ -1,8 +1,8 @@
 skeleton-src  = $(wildcard $(LIBRARY_ROOT)/skeleton/src/*.c)
 skeleton-obj  = $(skeleton-src:.c=.o)
-skeleton-deps = $(BUILD)/libs/c4rt.a
+skeleton-deps = $(BUILD)/lib/c4rt.a
 
-$(BUILD)/libs/skeleton.a: $(skeleton-obj) $(skeleton-deps)
+$(BUILD)/lib/skeleton.a: $(skeleton-obj) $(skeleton-deps)
 	ar rvs $@ $(skeleton-obj)
 
 .PHONY: skeleton-clean

@@ -88,7 +88,7 @@ static inline void stop_benchmark( unsigned reciever ){
 static unsigned long inter_reciever_stack[128];
 static unsigned long intra_reciever_stack[128];
 
-void _start( unsigned long nameserver ){
+int main(int argc, char *argv[]){
 	unsigned inter_id = c4_create_thread( reciever,
 	                                      inter_reciever_stack + 128, 
 	                                      THREAD_CREATE_FLAG_CLONE );

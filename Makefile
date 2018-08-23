@@ -13,7 +13,8 @@ do_all: all
 # and for sigma0 (this should be moved to the programs folder)
 -include sigma0/objs.mk
 
-ALL_TARGETS  += kernel sigma0 $(ALL_PROGRAMS)
+LIBC_STUFF    = $(BUILD)/lib/crt0.o $(BUILD)/lib/libc.a
+ALL_TARGETS  += kernel $(LIBC_STUFF) sigma0 $(ALL_PROGRAMS)
 ALL_CLEAN    += kernel-clean
 ALL_INCLUDES  = $(patsubst -I%,%,$(KERNEL_INCLUDE) $(LIBRARY_INCLUDE) $(PROGRAM_INCLUDE))
 
@@ -29,7 +30,6 @@ $(BUILD): $(BUILD)/usr/include
 	mkdir -p $(BUILD)/bin
 	mkdir -p $(BUILD)/src
 	mkdir -p $(BUILD)/lib
-	mkdir -p $(BUILD)/libs
 	mkdir -p $(BUILD)/tree
 
 $(BUILD)/c4-$(ARCH): $(BUILD)
@@ -50,7 +50,7 @@ $(BUILD)/include/usr/include: $(BUILD)
 		cp -RT "$$dir" "$@"; \
 	done;
 
-$(BUILD)/test.img: kernel sigma0 $(INITSYS_PROGRAMS)
+$(BUILD)/test.img: $(ALL_TARGETS)
 	sudo $(TOOL_ROOT)/buildimg-$(ARCH) $@ \
 		$(TOOL_ROOT)/bootconf-$(ARCH) \
 		$(BUILD)/c4-$(ARCH) \

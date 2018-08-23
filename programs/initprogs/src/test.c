@@ -18,9 +18,10 @@
 	  : "g"(N), "g"(A), "g"(B), "g"(C), "g"(D) \
 	  : "eax", "edi", "esi", "edx", "ebx" );
 
-void _start( void *data ){
+// TODO: remove this program
+int main(int argc, char *argv[]){
 	int ret;
-	uintptr_t display = (uintptr_t)data;
+	uintptr_t display = (uintptr_t)0;
 
 	volatile message_t msg = {
 		.type = MESSAGE_TYPE_DEBUG_PRINT,

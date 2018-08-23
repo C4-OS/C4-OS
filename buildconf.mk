@@ -1,4 +1,4 @@
-CROSS        = $(PWD)/cross/bin/i586-elf-
+CROSS        = $(PWD)/cross/bin/i686-elf-c4os-
 ARCH         = x86
 BUILD        = $(PWD)/.buildtmp
 KERNEL_ROOT  = $(PWD)/kernel
@@ -32,5 +32,6 @@ INITFS_PROGRAMS += $(BUILD)/bin/initsys
 INITSYS_PROGRAMS += $(BUILD)/bin/keyboard
 INITSYS_PROGRAMS += $(BUILD)/bin/ps2mouse
 INITSYS_PROGRAMS += $(BUILD)/bin/display
-INITSYS_PROGRAMS += $(BUILD)/bin/forth
-INITSYS_PROGRAMS += $(BUILD)/bin/clibtest
+#INITSYS_PROGRAMS += $(BUILD)/bin/forth
+#INITSYS_PROGRAMS += $(BUILD)/bin/clibtest
+INITSYS_PROGRAMS += $(BUILD)/bin/stubbywm

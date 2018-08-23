@@ -20,10 +20,15 @@ ALL_INCLUDES  = $(patsubst -I%,%,$(KERNEL_INCLUDE) $(LIBRARY_INCLUDE) $(PROGRAM_
 .PHONY: all
 all: $(ALL_TARGETS)
 
-$(BUILD):
+$(BUILD)/usr/include: $(ALL_INCLUDES)
+	mkdir -p $(BUILD)/usr
+	cp -rv $(ALL_INCLUDES) $(BUILD)/usr
+
+$(BUILD): $(BUILD)/usr/include
 	mkdir -p $(BUILD)
 	mkdir -p $(BUILD)/bin
 	mkdir -p $(BUILD)/src
+	mkdir -p $(BUILD)/lib
 	mkdir -p $(BUILD)/libs
 	mkdir -p $(BUILD)/tree
 
@@ -53,6 +58,10 @@ $(BUILD)/test.img: kernel sigma0 $(INITSYS_PROGRAMS)
 		$(BUILD)/tree \
 		$(INITSYS_PROGRAMS)
 
+.PHONY: toolchain
+toolchain: $(BUILD)
+	cd cross; make SYSROOT=$(BUILD) MAKEARGS=-j4
+
 .PHONY: kernel
 kernel: $(BUILD)/c4-$(ARCH)
 
@@ -69,8 +78,15 @@ initfs-clean:
 	rm -rf $(BUILD)/initfs
 	rm -f  $(BUILD)/initfs.tar
 
+.PHONY: sysroot
+sysroot: $(BUILD)
+
 .PHONY: sysincludes
 sysincludes: $(BUILD)/include/usr/include
+
+.PHONY: clean-sysroot
+clean-sysroot:
+	rm -rf $(BUILD)
 
 .PHONY: clean
 clean: $(ALL_CLEAN)

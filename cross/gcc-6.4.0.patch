@@ -1,0 +1,311 @@
+diff -ruN old-gcc/config.sub gcc-6.4.0/config.sub
+--- old-gcc/config.sub	2018-08-22 07:03:48.659829133 -0700
++++ gcc-6.4.0/config.sub	2018-08-22 08:00:29.193752461 -0700
+@@ -1399,7 +1399,7 @@
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+ 	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
+-	      | -onefs* | -tirtos* | -phoenix*)
++	      | -onefs* | -tirtos* | -phoenix* | -c4os*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)
+diff -ruN old-gcc/configure.ac gcc-6.4.0/configure.ac
+--- old-gcc/configure.ac	2018-08-22 07:03:33.475829475 -0700
++++ gcc-6.4.0/configure.ac	2018-08-22 08:01:10.853751521 -0700
+@@ -19,6 +19,8 @@
+ ##############################################################################
+ ### WARNING: this file contains embedded tabs.  Do not run untabify on this file.
+ 
++m4_define([_GCC_AUTOCONF_VERSION], [2.69])
++
+ m4_include(config/acx.m4)
+ m4_include(config/override.m4)
+ m4_include(config/proginstall.m4)
+diff -ruN old-gcc/fixincludes/mkfixinc.sh gcc-6.4.0/fixincludes/mkfixinc.sh
+--- old-gcc/fixincludes/mkfixinc.sh	2018-08-22 07:03:50.494829092 -0700
++++ gcc-6.4.0/fixincludes/mkfixinc.sh	2018-08-22 08:00:29.194752461 -0700
+@@ -11,6 +11,7 @@
+ 
+ # Check for special fix rules for particular targets
+ case $machine in
++	*-c4os* | \
+     i?86-*-cygwin* | \
+     i?86-*-mingw32* | \
+     x86_64-*-mingw32* | \
+diff -ruN old-gcc/gcc/config/c4os.h gcc-6.4.0/gcc/config/c4os.h
+--- old-gcc/gcc/config/c4os.h	1969-12-31 17:00:00.000000000 -0700
++++ gcc-6.4.0/gcc/config/c4os.h	2018-08-22 08:00:29.194752461 -0700
+@@ -0,0 +1,21 @@
++#undef TARGET_C4OS
++#define TARGET_C4OS 1
++
++#undef LIB_SPEC
++#define LIB_SPEC "-lc4rt -lc"
++
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "c4rt0.o%s crti.o%s crtbegin.o%s"
++
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "crtend.o%s crtn.o%s"
++
++#undef NO_IMPLICIT_EXTERN_C
++#define NO_IMPLICIT_EXTERN_C
++
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()       \
++	do {                               \
++		builtin_define("__c4os___");   \
++		builtin_assert("system=c4os"); \
++	} while(0);
+diff -ruN old-gcc/gcc/config.gcc gcc-6.4.0/gcc/config.gcc
+--- old-gcc/gcc/config.gcc	2018-08-22 07:03:46.906829173 -0700
++++ gcc-6.4.0/gcc/config.gcc	2018-08-22 08:00:29.195752461 -0700
+@@ -612,6 +612,11 @@
+ 
+ # Common parts for widely ported systems.
+ case ${target} in
++*-*-c4os*)
++  gas=yes
++  gnu_ld=yes
++  default_use_cxa_atexit=yes
++  ;;
+ *-*-darwin*)
+   tmake_file="t-darwin ${cpu_type}/t-darwin"
+   tm_file="${tm_file} darwin.h"
+@@ -912,6 +917,14 @@
+ esac
+ 
+ case ${target} in
++i[34567]86-*-c4os*)
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h"
++    tm_file="${tm_file} i386/i386elf.h c4os.h"
++    ;;
++x86_64-*-c4os*)
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h"
++    tm_file="${tm_file} i386/i386elf.h i386/x86-64.h c4os.h"
++    ;;
+ aarch64*-*-elf | aarch64*-*-rtems*)
+ 	tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h"
+ 	tm_file="${tm_file} aarch64/aarch64-elf.h aarch64/aarch64-elf-raw.h"
+diff -ruN old-gcc/libgcc/config.host gcc-6.4.0/libgcc/config.host
+--- old-gcc/libgcc/config.host	2018-08-22 07:03:38.367829365 -0700
++++ gcc-6.4.0/libgcc/config.host	2018-08-22 08:00:29.199752461 -0700
+@@ -327,6 +327,14 @@
+ esac
+ 
+ case ${host} in
++i[34567]86-*-c4os)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff.pic t-libgcc-pic"
++	;;
++x86_64-*-c4os)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff.pic t-libgcc-pic"
++	;;
+ aarch64*-*-elf | aarch64*-*-rtems*)
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+ 	extra_parts="$extra_parts crtfastmath.o"
+diff -ruN old-gcc/libstdc++-v3/autom4te.cache/output.0t gcc-6.4.0/libstdc++-v3/autom4te.cache/output.0t
+--- old-gcc/libstdc++-v3/autom4te.cache/output.0t	1969-12-31 17:00:00.000000000 -0700
++++ gcc-6.4.0/libstdc++-v3/autom4te.cache/output.0t	2018-08-22 08:01:17.930751362 -0700
+@@ -0,0 +1 @@
++@%:@! /bin/sh
+diff -ruN old-gcc/libstdc++-v3/autom4te.cache/traces.0t gcc-6.4.0/libstdc++-v3/autom4te.cache/traces.0t
+--- old-gcc/libstdc++-v3/autom4te.cache/traces.0t	1969-12-31 17:00:00.000000000 -0700
++++ gcc-6.4.0/libstdc++-v3/autom4te.cache/traces.0t	2018-08-22 08:01:17.930751362 -0700
+@@ -0,0 +1,177 @@
++m4trace:aclocal.m4:673: -1- m4_include([../config/acx.m4])
++m4trace:aclocal.m4:674: -1- m4_include([../config/enable.m4])
++m4trace:aclocal.m4:675: -1- m4_include([../config/futex.m4])
++m4trace:aclocal.m4:676: -1- m4_include([../config/iconv.m4])
++m4trace:aclocal.m4:677: -1- m4_include([../config/lead-dot.m4])
++m4trace:aclocal.m4:678: -1- m4_include([../config/lib-ld.m4])
++m4trace:aclocal.m4:679: -1- m4_include([../config/lib-link.m4])
++m4trace:aclocal.m4:680: -1- m4_include([../config/lib-prefix.m4])
++m4trace:aclocal.m4:681: -1- m4_include([../config/lthostflags.m4])
++m4trace:aclocal.m4:682: -1- m4_include([../config/multi.m4])
++m4trace:aclocal.m4:683: -1- m4_include([../config/no-executables.m4])
++m4trace:aclocal.m4:684: -1- m4_include([../config/override.m4])
++m4trace:aclocal.m4:685: -1- m4_include([../config/stdint.m4])
++m4trace:aclocal.m4:686: -1- m4_include([../config/unwind_ipinfo.m4])
++m4trace:aclocal.m4:687: -1- m4_include([../libtool.m4])
++m4trace:aclocal.m4:688: -1- m4_include([../ltoptions.m4])
++m4trace:aclocal.m4:689: -1- m4_include([../ltsugar.m4])
++m4trace:aclocal.m4:690: -1- m4_include([../ltversion.m4])
++m4trace:aclocal.m4:691: -1- m4_include([../lt~obsolete.m4])
++m4trace:aclocal.m4:692: -1- m4_include([crossconfig.m4])
++m4trace:aclocal.m4:693: -1- m4_include([linkage.m4])
++m4trace:aclocal.m4:694: -1- m4_include([acinclude.m4])
++m4trace:acinclude.m4:4489: -1- m4_include([../config/gc++filt.m4])
++m4trace:acinclude.m4:4490: -1- m4_include([../config/tls.m4])
++m4trace:../config/tls.m4:109: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CC_TLS])
++m4trace:../config/tls.m4:109: -1- m4_pattern_allow([^HAVE_CC_TLS$])
++m4trace:../config/tls.m4:109: -1- AH_OUTPUT([HAVE_CC_TLS], [/* Define to 1 if the target assembler supports thread-local storage. */
++@%:@undef HAVE_CC_TLS])
++m4trace:acinclude.m4:4491: -1- m4_include([../config/gthr.m4])
++m4trace:configure.ac:4: -1- AC_INIT([package-unused], [version-unused], [], [libstdc++])
++m4trace:configure.ac:4: -1- m4_pattern_forbid([^_?A[CHUM]_])
++m4trace:configure.ac:4: -1- m4_pattern_forbid([_AC_])
++m4trace:configure.ac:4: -1- m4_pattern_forbid([^LIBOBJS$], [do not use LIBOBJS directly, use AC_LIBOBJ (see section `AC_LIBOBJ vs LIBOBJS'])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^AS_FLAGS$])
++m4trace:configure.ac:4: -1- m4_pattern_forbid([^_?m4_])
++m4trace:configure.ac:4: -1- m4_pattern_forbid([^dnl$])
++m4trace:configure.ac:4: -1- m4_pattern_forbid([^_?AS_])
++m4trace:configure.ac:4: -1- AC_SUBST([SHELL])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([SHELL])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^SHELL$])
++m4trace:configure.ac:4: -1- AC_SUBST([PATH_SEPARATOR])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PATH_SEPARATOR])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PATH_SEPARATOR$])
++m4trace:configure.ac:4: -1- AC_SUBST([PACKAGE_NAME], [m4_ifdef([AC_PACKAGE_NAME],      ['AC_PACKAGE_NAME'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PACKAGE_NAME])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_NAME$])
++m4trace:configure.ac:4: -1- AC_SUBST([PACKAGE_TARNAME], [m4_ifdef([AC_PACKAGE_TARNAME],   ['AC_PACKAGE_TARNAME'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PACKAGE_TARNAME])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_TARNAME$])
++m4trace:configure.ac:4: -1- AC_SUBST([PACKAGE_VERSION], [m4_ifdef([AC_PACKAGE_VERSION],   ['AC_PACKAGE_VERSION'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PACKAGE_VERSION])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_VERSION$])
++m4trace:configure.ac:4: -1- AC_SUBST([PACKAGE_STRING], [m4_ifdef([AC_PACKAGE_STRING],    ['AC_PACKAGE_STRING'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PACKAGE_STRING])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_STRING$])
++m4trace:configure.ac:4: -1- AC_SUBST([PACKAGE_BUGREPORT], [m4_ifdef([AC_PACKAGE_BUGREPORT], ['AC_PACKAGE_BUGREPORT'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PACKAGE_BUGREPORT])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_BUGREPORT$])
++m4trace:configure.ac:4: -1- AC_SUBST([PACKAGE_URL], [m4_ifdef([AC_PACKAGE_URL],       ['AC_PACKAGE_URL'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([PACKAGE_URL])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_URL$])
++m4trace:configure.ac:4: -1- AC_SUBST([exec_prefix], [NONE])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([exec_prefix])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^exec_prefix$])
++m4trace:configure.ac:4: -1- AC_SUBST([prefix], [NONE])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([prefix])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^prefix$])
++m4trace:configure.ac:4: -1- AC_SUBST([program_transform_name], [s,x,x,])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([program_transform_name])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^program_transform_name$])
++m4trace:configure.ac:4: -1- AC_SUBST([bindir], ['${exec_prefix}/bin'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([bindir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^bindir$])
++m4trace:configure.ac:4: -1- AC_SUBST([sbindir], ['${exec_prefix}/sbin'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([sbindir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^sbindir$])
++m4trace:configure.ac:4: -1- AC_SUBST([libexecdir], ['${exec_prefix}/libexec'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([libexecdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^libexecdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([datarootdir], ['${prefix}/share'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([datarootdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^datarootdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([datadir], ['${datarootdir}'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([datadir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^datadir$])
++m4trace:configure.ac:4: -1- AC_SUBST([sysconfdir], ['${prefix}/etc'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([sysconfdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^sysconfdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([sharedstatedir], ['${prefix}/com'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([sharedstatedir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^sharedstatedir$])
++m4trace:configure.ac:4: -1- AC_SUBST([localstatedir], ['${prefix}/var'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([localstatedir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^localstatedir$])
++m4trace:configure.ac:4: -1- AC_SUBST([includedir], ['${prefix}/include'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([includedir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^includedir$])
++m4trace:configure.ac:4: -1- AC_SUBST([oldincludedir], ['/usr/include'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([oldincludedir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^oldincludedir$])
++m4trace:configure.ac:4: -1- AC_SUBST([docdir], [m4_ifset([AC_PACKAGE_TARNAME],
++				     ['${datarootdir}/doc/${PACKAGE_TARNAME}'],
++				     ['${datarootdir}/doc/${PACKAGE}'])])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([docdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^docdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([infodir], ['${datarootdir}/info'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([infodir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^infodir$])
++m4trace:configure.ac:4: -1- AC_SUBST([htmldir], ['${docdir}'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([htmldir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^htmldir$])
++m4trace:configure.ac:4: -1- AC_SUBST([dvidir], ['${docdir}'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([dvidir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^dvidir$])
++m4trace:configure.ac:4: -1- AC_SUBST([pdfdir], ['${docdir}'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([pdfdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^pdfdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([psdir], ['${docdir}'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([psdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^psdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([libdir], ['${exec_prefix}/lib'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([libdir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^libdir$])
++m4trace:configure.ac:4: -1- AC_SUBST([localedir], ['${datarootdir}/locale'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([localedir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^localedir$])
++m4trace:configure.ac:4: -1- AC_SUBST([mandir], ['${datarootdir}/man'])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([mandir])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^mandir$])
++m4trace:configure.ac:4: -1- AC_DEFINE_TRACE_LITERAL([PACKAGE_NAME])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_NAME$])
++m4trace:configure.ac:4: -1- AH_OUTPUT([PACKAGE_NAME], [/* Define to the full name of this package. */
++@%:@undef PACKAGE_NAME])
++m4trace:configure.ac:4: -1- AC_DEFINE_TRACE_LITERAL([PACKAGE_TARNAME])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_TARNAME$])
++m4trace:configure.ac:4: -1- AH_OUTPUT([PACKAGE_TARNAME], [/* Define to the one symbol short name of this package. */
++@%:@undef PACKAGE_TARNAME])
++m4trace:configure.ac:4: -1- AC_DEFINE_TRACE_LITERAL([PACKAGE_VERSION])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_VERSION$])
++m4trace:configure.ac:4: -1- AH_OUTPUT([PACKAGE_VERSION], [/* Define to the version of this package. */
++@%:@undef PACKAGE_VERSION])
++m4trace:configure.ac:4: -1- AC_DEFINE_TRACE_LITERAL([PACKAGE_STRING])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_STRING$])
++m4trace:configure.ac:4: -1- AH_OUTPUT([PACKAGE_STRING], [/* Define to the full name and version of this package. */
++@%:@undef PACKAGE_STRING])
++m4trace:configure.ac:4: -1- AC_DEFINE_TRACE_LITERAL([PACKAGE_BUGREPORT])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_BUGREPORT$])
++m4trace:configure.ac:4: -1- AH_OUTPUT([PACKAGE_BUGREPORT], [/* Define to the address where bug reports for this package should be sent. */
++@%:@undef PACKAGE_BUGREPORT])
++m4trace:configure.ac:4: -1- AC_DEFINE_TRACE_LITERAL([PACKAGE_URL])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^PACKAGE_URL$])
++m4trace:configure.ac:4: -1- AH_OUTPUT([PACKAGE_URL], [/* Define to the home page for this package. */
++@%:@undef PACKAGE_URL])
++m4trace:configure.ac:4: -1- AC_SUBST([DEFS])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([DEFS])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^DEFS$])
++m4trace:configure.ac:4: -1- AC_SUBST([ECHO_C])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([ECHO_C])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^ECHO_C$])
++m4trace:configure.ac:4: -1- AC_SUBST([ECHO_N])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([ECHO_N])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^ECHO_N$])
++m4trace:configure.ac:4: -1- AC_SUBST([ECHO_T])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([ECHO_T])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^ECHO_T$])
++m4trace:configure.ac:4: -1- AC_SUBST([LIBS])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([LIBS])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^LIBS$])
++m4trace:configure.ac:4: -1- AC_SUBST([build_alias])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([build_alias])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^build_alias$])
++m4trace:configure.ac:4: -1- AC_SUBST([host_alias])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([host_alias])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^host_alias$])
++m4trace:configure.ac:4: -1- AC_SUBST([target_alias])
++m4trace:configure.ac:4: -1- AC_SUBST_TRACE([target_alias])
++m4trace:configure.ac:4: -1- m4_pattern_allow([^target_alias$])
+diff -ruN old-gcc/libstdc++-v3/crossconfig.m4 gcc-6.4.0/libstdc++-v3/crossconfig.m4
+--- old-gcc/libstdc++-v3/crossconfig.m4	2018-08-22 07:03:33.325829479 -0700
++++ gcc-6.4.0/libstdc++-v3/crossconfig.m4	2018-08-22 08:00:29.202752460 -0700
+@@ -9,6 +9,13 @@
+     # This is a freestanding configuration; there is nothing to do here.
+     ;;
+ 
++  *-c4os*)
++    GLIBCXX_CHECK_COMPILER_FEATURES
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_MATH_SUPPORT
++    GLIBCXX_CHECK_STDLIB_SUPPORT
++	;;
++
+   mips*-sde-elf*)
+     # These definitions are for the SDE C library rather than newlib.
+     SECTION_FLAGS='-ffunction-sections -fdata-sections'

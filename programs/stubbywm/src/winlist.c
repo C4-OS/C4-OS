@@ -58,7 +58,7 @@ window_t window_create(int32_t width, int32_t height){
 			.height = height,
 		},
 
-		.color = c4rt_prng_u32() & 0xffffff,
+		.color = c4rt_prng_u32(),
 	};
 }
 

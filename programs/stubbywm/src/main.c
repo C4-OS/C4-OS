@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define STUBBYWM_ENABLE_TRANSPARENCY 1
+
 static void reset_updates(wm_t *wm) {
 	wm->num_updates = 0;
 }
@@ -65,6 +67,13 @@ static void update_region(wm_t *wm, stubby_point_t *a, stubby_point_t *b) {
 	normalize_point(wm, &up->upper);
 }
 
+static inline uint8_t mix_channel(uint8_t a, uint8_t b, uint8_t alpha) {
+	uint32_t lower = a * (255 - alpha);
+	uint32_t upper = b * alpha;
+
+	return (lower + upper) / 255;
+}
+
 inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
 	if (x < 0 || y < 0){
 		return;
@@ -73,6 +82,29 @@ inline void draw_pixel(wm_t *state, int32_t x, int32_t y, uint32_t pixel) {
 	if (x >= state->info.width || y >= state->info.height) {
 		return;
 	}
+
+#ifdef STUBBYWM_ENABLE_TRANSPARENCY
+	if ((pixel & 0xff000000) != 0) {
+		uint32_t *buf = state->buffer.vaddrptr;
+		uint32_t temp = buf[(y * state->info.width) + x];
+		uint8_t alpha = (pixel >> 24);
+
+		uint8_t t_red   = temp >> 16;
+		uint8_t t_green = temp >> 8;
+		uint8_t t_blue  = temp;
+
+		uint8_t p_red   = pixel >> 16;
+		uint8_t p_green = pixel >> 8;
+		uint8_t p_blue  = pixel;
+
+		uint32_t comp = (mix_channel(t_red, p_red, alpha) << 16)
+		                | (mix_channel(t_green, p_green, alpha) << 8)
+		                | (mix_channel(t_blue, p_blue, alpha));
+
+		buf[(y * state->info.width) + x] = comp;
+		return;
+	}
+#endif
 
 	// TODO: assumes 32 bpp, add support for others
 	uint32_t *buf = state->buffer.vaddrptr;
@@ -87,7 +119,7 @@ inline void draw_rect(wm_t *state, stubby_rect_t *rect, uint32_t color) {
 	}
 }
 
-static void draw_mouse(wm_t *state, uint32_t color) {
+static void draw_mouse(wm_t *state) {
 	ppm_draw(&state->mouse_cursor, state, state->mouse);
 }
 
@@ -275,11 +307,7 @@ static void event_loop(wm_t *state) {
 	while (true) {
 		draw_background(state);
 		draw_windows(state);
-		draw_mouse(state,
-		           0x800080
-		           | ((mev.flags & MOUSE_FLAG_LEFT)?   0xff0000 : 0)
-		           | ((mev.flags & MOUSE_FLAG_RIGHT)?  0x0000ff : 0)
-		           | ((mev.flags & MOUSE_FLAG_MIDDLE)? 0x00ff00 : 0));
+		draw_mouse(state);
 		draw_framebuffer(state);
 		reset_updates(state);
 

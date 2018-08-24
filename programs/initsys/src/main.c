@@ -10,6 +10,7 @@
 #include <c4/thread.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 typedef struct prognode {
 	char name[FS_MAX_NAME_LEN + 1];
@@ -57,7 +58,8 @@ prognode_t *enumerate_initprogs( unsigned fs ){
 			asdf->node = foo;
 			asdf->next = NULL;
 
-			strncpy(asdf->name, dirbuf.name, FS_MAX_NAME_LEN);
+			strcpy(asdf->name, "/sbin/");
+			strlcpy(asdf->name + 6, dirbuf.name, FS_MAX_NAME_LEN - 7);
 
 			if (head) {
 				head->next = asdf;
@@ -69,7 +71,7 @@ prognode_t *enumerate_initprogs( unsigned fs ){
 
 			c4_debug_printf(
 				"--- initsys: found \"%s\", inode %u, size: %u\n",
-				dirbuf.name, foo.inode, foo.size);
+				asdf->name, foo.inode, foo.size);
 		}
 
 	} else {
@@ -80,56 +82,12 @@ prognode_t *enumerate_initprogs( unsigned fs ){
 	return ret;
 }
 
-Elf32_Ehdr *read_program( unsigned fs, prognode_t *prog ){
-	// XXX: fixed-size buffer to store elfs from files, this will limit the size
-	//      of executables which can be loaded, and wastes memory
-	//
-	// TODO: dynamically allocate/free file buffers, or read from elf directly
-	//       into memory for the new process (which will require being able to
-	//       set the byte location of a file stream)
-	static uint8_t progbuf[PAGE_SIZE * 128] ALIGN_TO(PAGE_SIZE);
-	fs_connection_t conn = {};
-	void *ret = NULL;
-
-	if ( prog->node.size >= sizeof(progbuf) ){
-		// can't read the whole file into the buffer, so just return NULL
-		// to signal an error
-		goto done;
-	}
-
-	//fs_connect( fs, buffer, &conn );
-	fs_connect(fs, &conn);
-	fs_set_node( &conn, &prog->node );
-
-	size_t i = 0;
-	int nread = 0;
-
-	while (( nread = fs_read_block( &conn, progbuf + i, PAGE_SIZE )) > 0 ){
-		i += nread;
-	}
-
-	ret = elf_is_valid( (Elf32_Ehdr*)progbuf )? progbuf : NULL;
-
-done:
-	fs_disconnect( &conn );
-	return ret;
-}
-
 int load_program( unsigned fs, prognode_t *prog, unsigned nameserver ){
-	Elf32_Ehdr *foo = read_program( fs, prog );
+	const char *args[] = { prog->name, NULL };
+	const char *env[]  = { "rootfs=/dev/ext2fs", NULL };
 
-	if ( foo ){
-		c4_debug_printf(
-			"--- initsys: read program, continuing to load \"%s\"\n",
-			prog->name );
-
-		char *args[] = { prog->name, NULL };
-		char *env[]  = { "rootfs=/dev/ext2fs", NULL };
-		elf_load(foo, args, env);
-
-	} else {
-		c4_debug_printf( "--- initsys: could not read file\n" );
-	}
+	c4_debug_printf("--- initsys: loading \"%s\"\n", prog->name);
+	spawn(prog->name, args, env);
 
 	return 0;
 }

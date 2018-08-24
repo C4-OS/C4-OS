@@ -1,4 +1,7 @@
-#include <c4rt/stublibc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <c4/paging.h>
 #include <nameserver/nameserver.h>
 #include <stdint.h>
@@ -19,13 +22,19 @@ static inline void init_rootfs( void ){
 	}
 
 	initialized = true;
+	char *fallback = "/dev/ext2fs";
 	char *rootdev = getenv("rootfs");
 	unsigned nameserver = getnameserv();
+
+	c4_debug_printf("--- thread %u: nameserver at %u\n", c4_get_id(), nameserver);
 
 	if (!rootdev) {
 		c4_debug_printf("--- thread %u: could not find rootfs variable\n",
 			c4_get_id());
-		return;
+		c4_debug_printf("--- thread %u: setting fallback: %s...\n",
+			c4_get_id(), fallback);
+
+		rootdev = fallback;
 	}
 
 	if ((root_server = nameserver_lookup(nameserver, rootdev)) == 0) {
@@ -34,10 +43,14 @@ static inline void init_rootfs( void ){
 		return;
 	}
 
+	c4_debug_printf("--- thread %u: have server at %u\n", c4_get_id(), root_server);
+
 	fs_connect(root_server, &current_fs);
 	//fs_get_root_dir(root_server, &root_dir);
 	fs_get_root_dir(&current_fs, &root_dir);
 	current_dir = root_dir;
+
+	c4_debug_printf("--- thread %u: got here\n", c4_get_id());
 }
 
 static unsigned translate_modeflags( const char *mode ){
@@ -60,7 +73,7 @@ FILE *fopen( const char *path, const char *mode ){
 
 	FILE *ret = NULL;
 	char namebuf[FS_MAX_NAME_LEN + 1];
-	fs_node_t temp = (*path == '/')? path++, root_dir : current_dir;
+	fs_node_t temp = (*path == '/')? root_dir : current_dir;
 
 	/*
 	fs_connection_t conn = {};
@@ -68,6 +81,7 @@ FILE *fopen( const char *path, const char *mode ){
 	//fs_connect( root_server, fs_buffer, &conn );
 	//fs_connect( root_server, fs_buffer, &conn );
 	*/
+	c4_debug_printf("--- fopen(): path: \"%s\"...\n", path);
 
 	for ( int found = 1; found > 0; ){
 		while ( *path == '/' ) path++;
@@ -96,6 +110,7 @@ FILE *fopen( const char *path, const char *mode ){
 		fs_set_node(&current_fs, &temp);
 
 		strlcpy(namebuf, path, (foo + 1 < maxlen)? foo + 1 : maxlen);
+		c4_debug_printf("--- fopen(): looking for \"%s\"...\n", namebuf);
 		found = fs_find_name(&current_fs, &temp, namebuf, foo);
 		path += foo;
 

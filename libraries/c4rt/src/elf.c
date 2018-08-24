@@ -51,9 +51,9 @@ static inline uint8_t *elf_push_arg( uint8_t **from,
 	return *to;
 }
 
-static inline uint8_t *elf_push_str( uint8_t **from,
-                                     uint8_t **to,
-                                     char     *str )
+static inline uint8_t *elf_push_str( uint8_t    **from,
+                                     uint8_t    **to,
+                                     const char *str )
 {
 	size_t len = strlen( str ) + 1;
 
@@ -64,7 +64,7 @@ static inline uint8_t *elf_push_str( uint8_t **from,
 	return *to;
 }
 
-static inline unsigned strlist_len( char **things ){
+static inline unsigned strlist_len( const char **things ){
 	unsigned ret = 0;
 
 	for ( ; things[ret]; ret++ );
@@ -72,9 +72,9 @@ static inline unsigned strlist_len( char **things ){
 	return ret;
 }
 
-static inline char **elf_copy_strlist( uint8_t **from,
-                                       uint8_t **to,
-                                       char    **things )
+static inline char **elf_copy_strlist( uint8_t    **from,
+                                       uint8_t    **to,
+                                       const char **things )
 {
 	unsigned len = strlist_len( things );
 	uint8_t *foo[len];
@@ -92,11 +92,11 @@ static inline char **elf_copy_strlist( uint8_t **from,
 	return (char **)*to;
 }
 
-static inline void setup_stack_params( uint8_t  **from,
-                                       uint8_t  **to,
-                                       unsigned nameserver,
-                                       char     **argv,
-                                       char     **envp )
+static inline void setup_stack_params( uint8_t    **from,
+                                       uint8_t    **to,
+                                       unsigned   nameserver,
+                                       const char **argv,
+                                       const char **envp )
 {
 	char **to_argv = elf_copy_strlist( from, to, argv );
 	char **to_envp = elf_copy_strlist( from, to, envp );
@@ -108,7 +108,7 @@ static inline void setup_stack_params( uint8_t  **from,
 	elf_push_arg( from, to, 0 );
 }
 
-c4_process_t elf_load(Elf32_Ehdr *elf, char **argv, char **envp){
+c4_process_t elf_load(Elf32_Ehdr *elf, const char **argv, const char **envp){
 	return elf_load_full(elf, allot_pages, C4_NAMESERVER, C4_PAGER, argv, envp);
 }
 
@@ -116,8 +116,8 @@ c4_process_t elf_load_full( Elf32_Ehdr *elf,
                             int32_t (*page_allot)(unsigned),
                             int nameserver,
                             int pager,
-                            char **argv,
-                            char **envp )
+                            const char **argv,
+                            const char **envp )
 {
 	c4_process_t ret;
 

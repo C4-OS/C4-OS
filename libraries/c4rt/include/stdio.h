@@ -9,6 +9,30 @@
 #include <stdarg.h>
 
 enum {
+	FILE_STATUS_PRETTY_GOOD,
+	FILE_STATUS_CLOSED,
+	FILE_STATUS_END_OF_FILE,
+	FILE_STATUS_ERROR,
+};
+
+enum {
+	FILE_MODE_READ   = 1 << 1,
+	FILE_MODE_WRITE  = 1 << 2,
+	FILE_MODE_APPEND = 1 << 3,
+};
+
+enum {
+	EOF = -1,
+};
+
+// errno errors
+enum {
+	ENONE,
+	EBADF,
+};
+
+
+enum {
 	SEEK_SET,
 };
 

@@ -1,6 +1,7 @@
 #ifndef _C4RT_ELF_H
 #define _C4RT_ELF_H 1
 #include <stdbool.h>
+#include <stdint.h>
 
 #define EI_NIDENT 16
 
@@ -237,13 +238,13 @@ typedef struct c4_process {
 } c4_process_t;
 
 bool elf_is_valid( Elf32_Ehdr * );
-c4_process_t elf_load( Elf32_Ehdr *elf, char **argv, char **envp );
+c4_process_t elf_load( Elf32_Ehdr *elf, const char **argv, const char **envp );
 c4_process_t elf_load_full( Elf32_Ehdr *elf,
                             int32_t (*page_allot)(unsigned),
                             int nameserver,
                             int pager,
-                            char **argv,
-                            char **envp );
+                            const char **argv,
+                            const char **envp );
 
 Elf32_Shdr *elf_get_shdr( Elf32_Ehdr *, unsigned );
 Elf32_Shdr *elf_get_shdr_byname( Elf32_Ehdr *, char * );

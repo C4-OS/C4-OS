@@ -59,6 +59,7 @@ window_t window_create(int32_t width, int32_t height){
 		},
 
 		.color = c4rt_prng_u32(),
+		.has_buffer = false,
 	};
 }
 

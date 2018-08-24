@@ -4,12 +4,14 @@
 #include <c4rt/interface/keyboard.h>
 #include <c4rt/interface/mouse.h>
 #include <c4rt/interface/framebuffer.h>
-#include <c4rt/stublibc.h>
+#include <c4rt/connman.h>
 
 #include <stubbywm/stubbywm.h>
 #include <stubbywm/mouse_icons.h>
+#include <stubbywm/interface.h>
 #include <nameserver/nameserver.h>
 
+#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -166,7 +168,17 @@ static void draw_window(wm_t *state, window_t *window) {
 
 		for (unsigned y = y_start; y < b.y && y < up.upper.y; y++) {
 			for (unsigned x = x_start; x < b.x && x < up.upper.x; x++) {
-				draw_pixel(state, x, y, window->color);
+				if (window->has_buffer) {
+					uint32_t *buf = window->buffer.vaddrptr;
+					int32_t yoff = ((y - a.y) * window->rect.width);
+					int32_t xoff = x - a.x;
+					int32_t index = yoff + xoff;
+
+					draw_pixel(state, x, y, buf[index]);
+				}
+				else {
+					draw_pixel(state, x, y, window->color);
+				}
 			}
 		}
 	}
@@ -293,7 +305,44 @@ static void handle_mouse(wm_t *wm, mouse_event_t *ev) {
 }
 
 static void handle_keyboard(wm_t *state, keyboard_event_t *ev) {
-	// TODO
+	window_node_t *node = state->winlist.end;
+
+	if (!node || !node->window.has_buffer) {
+		return;
+	}
+
+	message_t msg = {
+		.type = STUBBYWM_KEYBOARD_EVENT,
+		.data = {
+			0,
+		}
+	};
+
+	c4_msg_send_async(&msg, node->window.to_port);
+}
+
+static window_node_t *find_client(wm_t *state, uint32_t id) {
+	window_node_t *temp = state->winlist.start;
+
+	for (; temp; temp = temp->next) {
+		if (id == temp->window.color) {
+			return temp;
+		}
+	}
+
+	return NULL;
+}
+
+static void handle_client_update(wm_t *state, message_t *msg) {
+	uint32_t id = msg->data[0];
+	window_node_t *node = find_client(state, id);
+
+	if (!node) {
+		C4_ASSERT(node != NULL);
+		return;
+	}
+
+	update_window_region(state, &node->window);
 }
 
 static void event_loop(wm_t *state) {
@@ -324,14 +373,101 @@ static void event_loop(wm_t *state) {
 				handle_keyboard(state, &kev);
 				break;
 
+			case STUBBYWM_UPDATE:
+				handle_client_update(state, &msg);
+				break;
+
 			default:
 				break;
 		}
 	}
 }
 
+// TODO: add a way to pass parameters to threads when creating them
+// TODO: also do locking in wm_t struct
+static wm_t state;
+
+static void server_handle_new_window(wm_t *wm, message_t *msg, int32_t port) {
+	uint32_t x = msg->data[0];
+	uint32_t y = msg->data[1];
+	uint32_t width = msg->data[2];
+	uint32_t height = msg->data[3];
+
+	c4_debug_printf("--- stubbywm: new window request:"
+	                "x: %u, y: %u, width: %u, height: %u\n",
+	                x, y, width, height);
+
+	size_t size = width * height * 4;
+	window_t newwin = window_create(width, height);
+
+	newwin.to_port    = c4_msg_create_async();
+	newwin.from_port  = c4_msg_create_async();
+	newwin.sync_port  = c4_msg_create_sync();
+	newwin.has_buffer = true;
+
+	message_t reply = {
+		.type = STUBBYWM_NEW_WINDOW_RESPONSE,
+		.data = {
+			x,
+			y,
+			width,
+			height,
+			newwin.color,
+		},
+	};
+
+	c4_msg_send(&reply, port);
+
+	C4_ASSERT(c4_memobj_alloc(&newwin.buffer, size, PAGE_READ | PAGE_WRITE));
+	c4_cspace_grant(newwin.to_port, port,
+	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
+	c4_cspace_grant(newwin.from_port, port,
+	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
+	c4_cspace_grant(wm->peripherals, port,
+	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
+	c4_cspace_grant(newwin.sync_port, port,
+	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
+	c4_cspace_grant(newwin.buffer.page_obj, port,
+	                CAP_ACCESS | CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE);
+
+	window_list_insert(&wm->winlist, &newwin);
+	update_window_region(wm, &newwin);
+}
+
+static void server_loop(void) {
+	while (true) {
+		c4_debug_printf("--- stubbywm: server listening...\n");
+		message_t msg;
+		c4_msg_recieve(&msg, C4_SERV_PORT);
+		c4_debug_printf("--- stubbywm: got message...\n");
+
+		if (msg.type != MESSAGE_TYPE_GRANT_OBJECT){
+			continue;
+		}
+
+		c4_debug_printf("--- stubbywm: waiting for endpoint...\n");
+		int32_t temp = msg.data[5];
+		C4_ASSERT(msg.data[0] == CAP_TYPE_IPC_SYNC_ENDPOINT);
+		c4_msg_recieve(&msg, temp);
+
+		c4_debug_printf("--- stubbywm: handling message %u...\n", msg.type);
+
+		switch (msg.type) {
+			case STUBBYWM_NEW_WINDOW:
+				c4_debug_printf("--- stubbywm: have new window request\n");
+				server_handle_new_window(&state, &msg, temp);
+				break;
+
+			default:
+				break;
+		}
+
+		c4_cspace_remove(C4_CURRENT_CSPACE, temp);
+	}
+}
+
 int main(int argc, char *argv[]) {
-	wm_t state;
+	//wm_t state;
 	memset(&state, 0, sizeof(state));
 
 	// initialize icons
@@ -377,6 +513,8 @@ int main(int argc, char *argv[]) {
 	c4rt_peripheral_connect(keyboard, state.peripherals);
 	c4rt_peripheral_connect(mouse, state.peripherals);
 
+	nameserver_bind(C4_NAMESERVER, "stubbywm", C4_SERV_PORT);
+
 	// create some dummy windows
 	window_t w = window_create(256, 256);
 	window_set_pos(&w, 128, 128);
@@ -393,6 +531,15 @@ int main(int argc, char *argv[]) {
 	w = window_create(256, 128);
 	window_set_pos(&w, 512, 512);
 	window_list_insert(&state.winlist, &w);
+
+	static uint8_t worker_stack[PAGE_SIZE];
+
+	// TODO: make a library function to handle all of this
+	uint32_t tid = c4_create_thread(server_loop, worker_stack + PAGE_SIZE, 0);
+	c4_set_capspace(tid, C4_CURRENT_CSPACE);
+	c4_set_addrspace(tid, C4_CURRENT_ADDRSPACE);
+	c4_set_pager(tid, C4_PAGER);;
+	c4_continue_thread(tid);
 
 	event_loop(&state);
 

@@ -3,7 +3,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <c4rt/interface/framebuffer.h>
+#include <c4rt/c4rt.h>
 
 enum { MAX_UPDATES = 32, };
 
@@ -31,6 +33,11 @@ struct window {
 	stubby_rect_t rect;
 	c4_mem_object_t buffer;
 	uint32_t color;
+	bool has_buffer;
+
+	uint32_t to_port;
+	uint32_t from_port;
+	uint32_t sync_port;
 };
 
 struct window_node {

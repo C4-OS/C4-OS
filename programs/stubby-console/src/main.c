@@ -11,6 +11,12 @@ int main(int argc, char *argv[]){
 	                 c4_get_id());
 
 	int32_t serv = nameserver_lookup(C4_NAMESERVER, "stubbywm");
+
+	// TODO: add polling lookup call to nameserver interface
+	for (unsigned i = 0; serv <= 0 && i < 100; i++) {
+		serv = nameserver_lookup(C4_NAMESERVER, "stubbywm");
+	}
+
 	C4_ASSERT(serv > 0);
 
 	stubbywm_window_t win = stubbywm_new_window(serv, 480, 320);

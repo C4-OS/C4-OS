@@ -260,6 +260,9 @@ static void update_window_region(wm_t *wm, window_t *window) {
 
 static void handle_mouse(wm_t *wm, mouse_event_t *ev) {
 	update_mouse_region(wm);
+	// TODO: mouse movement scaling
+	int32_t up_x = ev->x /*/ 4*/;
+	int32_t up_y = ev->y /*/ 4*/;
 
 	window_node_t *node = wm->winlist.end;
 
@@ -286,8 +289,8 @@ static void handle_mouse(wm_t *wm, mouse_event_t *ev) {
 
 				// TODO: move this into window_set_pos()
 				stubby_point_t pt = node->window.rect.coord;
-				pt.x += ev->x;
-				pt.y -= ev->y;
+				pt.x += up_x;
+				pt.y -= up_y;
 				normalize_point(wm, &pt);
 				window_set_pos(&node->window, pt.x, pt.y);
 
@@ -297,8 +300,8 @@ static void handle_mouse(wm_t *wm, mouse_event_t *ev) {
 		}
 	}
 
-	wm->mouse.x += ev->x;
-	wm->mouse.y -= ev->y;
+	wm->mouse.x += up_x;
+	wm->mouse.y -= up_y;
 
 	normalize_point(wm, &wm->mouse);
 	update_mouse_region(wm);
@@ -475,6 +478,10 @@ int main(int argc, char *argv[]) {
 
 	// initialize framebuffer
 	state.buf_server = nameserver_lookup(C4_NAMESERVER, "/dev/framebuffer");
+
+	for (unsigned i = 0; state.buf_server == 0 && i < 100; i++) {
+		state.buf_server = nameserver_lookup(C4_NAMESERVER, "/dev/framebuffer");
+	}
 
 	if (!state.buf_server) {
 		c4_debug_printf("--- stubbywm: couldn't find framebuffer...\n");

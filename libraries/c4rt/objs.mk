@@ -3,7 +3,7 @@ c4rt-src += $(wildcard $(LIBRARY_ROOT)/c4rt/libc/*.c)
 c4rt-obj  = $(c4rt-src:.c=.o)
 
 c4rt-crt-src = $(wildcard $(LIBRARY_ROOT)/c4rt/crt/*.c)
-c4rt-crt-obj = $(libc-crt-src:.c=.o)
+c4rt-crt-obj = $(c4rt-crt-src:.c=.o)
 
 $(BUILD)/lib/libc.a: $(c4rt-obj)
 	ar rvs $@ $^

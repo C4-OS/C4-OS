@@ -26,45 +26,50 @@ static inline void nameserver_bind( unsigned server,
                                     const char *name,
                                     int32_t endpoint )
 {
-	c4_debug_printf( "--- thread %u: binding %s\n", c4_get_id(), name );
-	C4_ASSERT( endpoint > 0 );
+	int32_t temp = c4_send_temp_endpoint(server);
 
-	int ret = c4_cspace_grant( endpoint, server,
-	                           CAP_ACCESS | CAP_MODIFY
-	                           | CAP_MULTI_USE | CAP_SHARE );
-	C4_ASSERT( ret >= 0 );
+	c4_debug_printf("--- thread %u: binding %s\n", c4_get_id(), name);
+	C4_ASSERT(endpoint > 0);
 
 	message_t msg = {
 		.type = NAME_BIND,
 		.data = { nameserver_hash(name) },
 	};
 
-	c4_msg_send( &msg, endpoint );
+	c4_msg_send( &msg, temp );
+
+	int ret = c4_cspace_grant(endpoint, temp,
+	                          CAP_MODIFY | CAP_MULTI_USE | CAP_SHARE );
+	C4_ASSERT(ret >= 0);
+	c4_cspace_remove(C4_CURRENT_CSPACE, temp);
 }
 
 static inline unsigned nameserver_lookup( unsigned server, const char *name ){
-	c4_debug_printf( "--- thread %u: trying to find %s\n", c4_get_id(), name );
+	c4_debug_printf("--- thread %u: trying to find %s\n", c4_get_id(), name);
 
+	/*
 	int responseq = c4_msg_create_sync();
-	C4_ASSERT( responseq > 0 );
+	C4_ASSERT(responseq > 0);
 
-	int ret = c4_cspace_grant( responseq, server,
-	                           CAP_ACCESS | CAP_MODIFY
-	                           | CAP_MULTI_USE | CAP_SHARE );
-	C4_ASSERT( ret >= 0 );
+	int ret = c4_cspace_grant(responseq, server,
+	                          CAP_ACCESS | CAP_MODIFY
+	                          | CAP_MULTI_USE | CAP_SHARE);
+	C4_ASSERT(ret >= 0);
+	*/
+	int responseq = c4_send_temp_endpoint(server);
 
 	message_t msg = {
 		.type = NAME_LOOKUP,
 		.data = { nameserver_hash(name) },
 	};
 
-	c4_msg_send( &msg, responseq );
-	c4_msg_recieve( &msg, responseq );
+	c4_msg_send(&msg, responseq);
+	c4_msg_recieve(&msg, responseq);
 	c4_cspace_remove(C4_CURRENT_CSPACE, responseq);
-	C4_ASSERT( msg.type == MESSAGE_TYPE_GRANT_OBJECT );
+	C4_ASSERT(msg.type == MESSAGE_TYPE_GRANT_OBJECT);
 
 	if (msg.type == MESSAGE_TYPE_GRANT_OBJECT){
-		c4_debug_printf( "--- thread %u: got %u\n", c4_get_id(), msg.data[5] );
+		c4_debug_printf("--- thread %u: got %u\n", c4_get_id(), msg.data[5]);
 		return msg.data[5];
 	}
 

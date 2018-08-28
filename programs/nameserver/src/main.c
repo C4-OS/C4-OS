@@ -65,6 +65,8 @@ int main(int argc, char *argv[]){
 	while ( true ){
 		message_t msg;
 		int32_t obj;
+		int32_t temp;
+		int32_t id = 0;
 		int ret;
 
 		c4_debug_printf( "--- nameserver: waiting: %u\n", c4_get_id() );
@@ -72,26 +74,27 @@ int main(int argc, char *argv[]){
 		c4_debug_printf( "--- nameserver: got %u\n", k );
 		c4_debug_printf( "--- nameserver: recieved message %u\n", msg.type );
 
+		C4_ASSERT(msg.type == MESSAGE_TYPE_GRANT_OBJECT);
+		temp = msg.data[5];
+		c4_debug_printf("--- nameserver: got temp endpoint...\n");
+		c4_msg_recieve(&msg, temp);
+		c4_debug_printf("--- nameserver: got real message\n");
+
 		switch ( msg.type ){
-			case MESSAGE_TYPE_GRANT_OBJECT:
+			case NAME_LOOKUP:
+				handle_lookup(temp, msg.data[0]);
+				break;
+
+			case NAME_BIND:
+				id = msg.data[0];
+				ret = c4_msg_recieve(&msg, temp);
 				obj = msg.data[5];
-				ret = c4_msg_recieve( &msg, obj );
 
-				C4_ASSERT( ret >= 0 );
-				C4_ASSERT( msg.type == NAME_BIND || msg.type == NAME_LOOKUP );
+				C4_ASSERT(msg.type == MESSAGE_TYPE_GRANT_OBJECT);
+				C4_ASSERT(ret >= 0);
+				C4_ASSERT(obj >= 0);
 
-				if ( msg.type == NAME_BIND ){
-					handle_bind( obj, msg.data[0] );
-
-				} else if ( msg.type == NAME_LOOKUP ){
-					handle_lookup( obj, msg.data[0] );
-
-				} else {
-					c4_debug_printf( "--- nameserver: don't know what to "
-					                 "do with object %u\n", obj );
-					c4_cspace_remove( 0, obj );
-				}
-
+				handle_bind(obj, id);
 				break;
 
 			case NAME_UNBIND:
@@ -101,6 +104,8 @@ int main(int argc, char *argv[]){
 				c4_debug_printf( "--- nameserver: unknown message %u\n", msg.type );
 				break;
 		}
+
+		c4_cspace_remove(C4_CURRENT_CSPACE, temp);
 	}
 
 	return 0;

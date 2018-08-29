@@ -21,13 +21,16 @@ EXISTS=`test -e $IMAGE; echo $?`
 copy_files () {
 	mkdir -p temp_mount/sbin
 	mkdir -p temp_mount/boot
-	cp -r "$FSTREE"/* temp_mount
+	cp -r "$FSTREE"/tree/* temp_mount
+	cp -r "$FSTREE"/bin temp_mount
+	cp -r "$FSTREE"/lib temp_mount
+	cp -r "$FSTREE"/usr temp_mount
 	cp $@ temp_mount/sbin
 }
 
 linux_init_image () {
 	if [ $EXISTS = 1 ]; then
-		printf "n\np\n\n2048\n+16M\na\nw\nq\n" | fdisk $IMAGE > /dev/null
+		printf "n\np\n\n2048\n+64M\na\nw\nq\n" | fdisk $IMAGE > /dev/null
 	fi
 
 	losetup -o$(( 2048 * 512 )) /dev/loop0 $IMAGE
@@ -84,7 +87,7 @@ freebsd_unmount_image () {
 
 # main program entry point
 if [ $EXISTS = 1 ]; then
-	dd if=/dev/zero of=$IMAGE bs=1M count=18 > /dev/null
+	dd if=/dev/zero of=$IMAGE bs=1M count=66 > /dev/null
 	chmod uga+rw $IMAGE
 fi
 

@@ -24,16 +24,16 @@ typedef struct state {
 void start_nameserv(constate_t *state, const char *envp[]) {
 	const char *nullargs[] = {NULL};
 
-	state->nameserver = spawn("/sbin/nameserver", nullargs, envp);
+	state->nameserver = spawn("/bin/nameserver", nullargs, envp);
 	c4_cspace_move(C4_CURRENT_CSPACE, state->nameserver.endpoint,
 	               C4_CURRENT_CSPACE, C4_NAMESERVER);
 }
 
 void start_servers(constate_t *state, const char *envp[]) {
 	const char *nullargs[] = {NULL};
-	const char *displayargs[] = {"/sbin/display", "--nested", NULL};
+	const char *displayargs[] = {"/bin/display", "--nested", NULL};
 
-	state->console = spawn("/sbin/display", displayargs, envp);
+	state->console = spawn("/bin/display", displayargs, envp);
 	state->program = spawn("/bin/forth",    nullargs,    envp);
 }
 

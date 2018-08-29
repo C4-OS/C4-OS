@@ -55,7 +55,7 @@ $(BUILD)/test.img: $(ALL_TARGETS)
 		$(TOOL_ROOT)/bootconf-$(ARCH) \
 		$(BUILD)/c4-$(ARCH) \
 		$(BUILD)/c4-$(ARCH)-sigma0 \
-		$(BUILD)/tree \
+		$(BUILD) \
 		$(INITSYS_PROGRAMS)
 
 .PHONY: toolchain

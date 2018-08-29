@@ -62,7 +62,7 @@ c4_process_t spawn(const char *name, const char *argv[], const char *envp[]){
 		return ret;
 	};
 
-	elf_load((void*)progbuf, argv, envp);
+	ret = elf_load((void*)progbuf, argv, envp);
 
 	return ret;
 }

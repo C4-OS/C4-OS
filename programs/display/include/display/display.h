@@ -1,6 +1,7 @@
 #ifndef _C4OS_DISPLAY_H
 #define _C4OS_DISPLAY_H 1
 #include <stdint.h>
+#include <c4rt/mem.h>
 
 enum {
 	VGA_TEXT_WIDTH  = 80,
@@ -10,8 +11,8 @@ enum {
 };
 
 enum {
-	GRAPHIC_FOREGROUND = 0xd0d0d0,
-	GRAPHIC_BACKGROUND = 0x181818,
+	GRAPHIC_FOREGROUND = 0x00d0d0d0,
+	GRAPHIC_BACKGROUND = 0xa0181818,
 };
 
 typedef struct vga_char {
@@ -40,8 +41,9 @@ typedef struct display {
 	void (*clear)( struct display *state );
 	void (*scroll)( struct display *state );
 
-	unsigned x;
-	unsigned y;
+	// framebuffer dimensions
+	unsigned fb_width;
+	unsigned fb_height;
 
 	// width and height are in characters, for the framebuffer
 	// this will be calculated by dividing screen dimensions by
@@ -49,11 +51,20 @@ typedef struct display {
 	unsigned width;
 	unsigned height;
 
+	// character coordinates
+	unsigned x;
+	unsigned y;
+
 	// framebuffer memory capability
 	uint32_t buf_cap;
+	c4_mem_object_t buf;
+
+	// async endpoint to alert on updates
+	uint32_t notify_cap;
 } display_t;
 
-void framebuffer_init( display_t *state );
+void framebuffer_init_raw( display_t *state );
+void framebuffer_init_nested( display_t *state );
 void framebuf_clear( display_t *state );
 void framebuf_scroll( display_t *state );
 void framebuf_draw_char( display_t *state,

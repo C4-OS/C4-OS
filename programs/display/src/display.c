@@ -11,6 +11,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 static inline void do_newline( display_t *state ){
 	if ( ++state->y >= state->height - 1 ){
@@ -76,8 +77,10 @@ static void send_framebuf_info(message_t *msg, display_t *state, uint32_t port){
 	message_t ret = {
 		.type = FRAMEBUFFER_MSG_INFO,
 		.data = {
-			c4_bootinfo->framebuffer.width,
-			c4_bootinfo->framebuffer.height,
+			state->fb_width,
+			state->fb_height,
+			//c4_bootinfo->framebuffer.width,
+			//c4_bootinfo->framebuffer.height,
 			32,
 		},
 	};
@@ -98,23 +101,30 @@ static void send_framebuffer(message_t *msg, display_t *state, uint32_t port){
 int main(int argc, char *argv[]){
 	message_t msg;
 	display_t state;
-	int serv_port = c4_msg_create_sync();
 
-	if ( c4_bootinfo->framebuffer.exists ){
-		framebuffer_init( &state );
+	// mode for running as part of another program
+	if (argc >= 2 && strcmp(argv[1], "--nested") == 0) {
+		c4_debug_printf("--- display: got here\n");
+		framebuffer_init_nested(&state);
+	}
+
+	else if ( c4_bootinfo->framebuffer.exists ){
+		framebuffer_init_raw( &state );
 		// TODO: consider splitting console and framebuffer programs, having both
 		//       managed by the same program is convenient for now though
-		nameserver_bind( C4_NAMESERVER, "/dev/framebuffer", serv_port );
+		nameserver_bind( C4_NAMESERVER, "/dev/framebuffer", C4_SERV_PORT );
 
-	} else {
+	}
+
+	else {
 		textbuffer_init( &state );
 	}
 
-	nameserver_bind( C4_NAMESERVER, "/dev/console", serv_port );
+	nameserver_bind( C4_NAMESERVER, "/dev/console", C4_SERV_PORT );
 
 	while ( true ){
 		uint32_t temp = 0;
-		c4_msg_recieve(&msg, serv_port);
+		c4_msg_recieve(&msg, C4_SERV_PORT);
 
 		if (msg.type == MESSAGE_TYPE_GRANT_OBJECT) {
 			temp = msg.data[5];

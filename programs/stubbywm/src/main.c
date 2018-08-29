@@ -314,11 +314,15 @@ static void handle_keyboard(wm_t *state, keyboard_event_t *ev) {
 		return;
 	}
 
+	// TODO: why not forward the raw KEYBOARD_MSG_EVENT?
 	message_t msg = {
 		.type = STUBBYWM_KEYBOARD_EVENT,
 		.data = {
-			0,
-		}
+			ev->character,
+			ev->modifiers,
+			ev->scancode,
+			ev->event,
+		},
 	};
 
 	c4_msg_send_async(&msg, node->window.to_port);

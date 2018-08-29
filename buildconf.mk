@@ -15,9 +15,7 @@ INTERFACE_INCLUDE = -I$(PWD)
 C4_CC     = $(CROSS)gcc
 C4_LD     = $(CROSS)ld
 C4_CXX    = $(CROSS)g++
-C4_CFLAGS = -Wall -g \
-            $(KERNEL_INCLUDE) $(LIBRARY_INCLUDE) $(PROGRAM_INCLUDE) \
-			$(INTERFACE_INCLUDE)
+C4_CFLAGS = -Wall -g
 
 %.o: %.c
 	@echo CC $< -c -o $@
@@ -34,3 +32,4 @@ INITSYS_PROGRAMS += $(BUILD)/bin/display
 #INITSYS_PROGRAMS += $(BUILD)/bin/forth
 #INITSYS_PROGRAMS += $(BUILD)/bin/clibtest
 INITSYS_PROGRAMS += $(BUILD)/bin/stubbywm
+INITSYS_PROGRAMS += $(BUILD)/bin/stubby-console

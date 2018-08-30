@@ -1,5 +1,4 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <c4/paging.h>
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
@@ -8,6 +7,10 @@
 #include <c4rt/interface/console.h>
 #include <nameserver/nameserver.h>
 #include <c4alloc/c4alloc.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
 
 static inline void *popptr( minift_vm_t *vm ){
 	return (void *)minift_pop( vm, &vm->param_stack );
@@ -257,6 +260,32 @@ static bool c4_minift_include_file( minift_vm_t *vm ){
 	return true;
 }
 
+static bool c4_minift_open_dir( minift_vm_t *vm ){
+	char *name = popptr( vm );
+	DIR *dir = opendir(name);
+
+	pushptr(vm, dir);
+	pushnum(vm, dir? 0 : 1 );
+
+	return true;
+}
+
+static bool c4_minift_read_dir( minift_vm_t *vm ){
+	DIR *dir = popptr( vm );
+	struct dirent *dirp = readdir(dir);
+
+	pushptr(vm, dirp);
+	pushnum(vm, dirp? 0 : 1 );
+
+	return true;
+}
+
+static bool c4_minift_close_dir( minift_vm_t *vm ){
+	closedir( popptr( vm ));
+
+	return true;
+}
+
 static minift_archive_entry_t c4_words[] = {
 	// general interface words
 	{ "sendmsg",  c4_minift_sendmsg, 0 },
@@ -285,6 +314,11 @@ static minift_archive_entry_t c4_words[] = {
 	{ "write-file",   c4_minift_write_file },
 	{ "write-line",   c4_minift_write_line },
 	{ "include-file", c4_minift_include_file },
+
+	// directory words
+	{ "open-dir",     c4_minift_open_dir },
+	{ "read-dir",     c4_minift_read_dir },
+	{ "close-dir",    c4_minift_close_dir },
 };
 
 static minift_archive_t c4_archive = {

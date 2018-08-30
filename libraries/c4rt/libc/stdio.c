@@ -125,8 +125,12 @@ FILE *fopen( const char *path, const char *mode ){
 }
 
 int fclose( FILE *fp ){
-	fp->status = FILE_STATUS_CLOSED;
-	fs_disconnect(&fp->conn);
+	if (fp) {
+		fp->status = FILE_STATUS_CLOSED;
+		fs_disconnect(&fp->conn);
+		free(fp);
+	}
+
 	return 0;
 }
 
@@ -134,12 +138,37 @@ FILE *freopen( const char *path, const char *mode, FILE *fp ){
 	FILE *temp = fopen( path, mode );
 
 	if (temp) {
-		fclose( fp );
+		fs_disconnect(&fp->conn);
+		//fclose( fp );
 		*fp = *temp;
 		return fp;
 	}
 
 	return NULL;
+}
+
+DIR *opendir(const char *name){
+	// TODO: check that it's actually a directory
+	return fopen(name, "r");
+}
+
+struct dirent *readdir(DIR *dirp) {
+	fs_dirent_t dirent;
+
+	if (fs_next_dirent(&dirp->conn, &dirent) <= 0) {
+		return NULL;
+	}
+
+	strlcpy(&dirp->dent.d_name, dirent.name, 256);
+	dirp->dent.d_reclen = sizeof(struct dirent);
+	dirp->dent.d_ino    = dirent.inode;
+	dirp->dent.d_off    = 0;
+
+	return &dirp->dent;
+}
+
+int closedir(DIR *dirp){
+	return fclose(dirp);
 }
 
 size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){

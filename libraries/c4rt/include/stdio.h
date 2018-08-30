@@ -36,18 +36,35 @@ enum {
 	SEEK_SET,
 };
 
+// TODO: move posix-y stuff to the proper headers
+typedef uint32_t ino_t;
+typedef uint32_t off_t;
+struct dirent {
+	ino_t    d_ino;
+	off_t    d_off;
+	uint16_t d_reclen;
+	uint8_t  d_type;
+
+	char d_name[256];
+};
+
 // file functions
 typedef struct c_filestruct {
 	fs_connection_t conn;
-	//unsigned  server;
 	fs_node_t node;
 
+	struct dirent dent;
 	unsigned  status;
 	int       charbuf;
 	char      mode;
 	bool      have_char;
 	bool      used;
 } FILE;
+
+typedef FILE DIR;
+DIR *opendir(const char *name);
+struct dirent *readdir(DIR *dirp);
+int closedir(DIR *dirp);
 
 FILE *fopen( const char *path, const char *mode );
 int   fclose( FILE *fp );

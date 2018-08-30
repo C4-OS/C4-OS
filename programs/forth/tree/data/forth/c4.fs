@@ -49,6 +49,24 @@ create file-buffer 1024 allot
   drop
 ;
 
+0 value ls-dir
+
+: dirent-name ( dirent* -- char* )
+  11 +
+;
+
+: ls ( path -- )
+  open-dir
+  if 0 = then
+    to ls-dir
+    while ls-dir read-dir 0 = begin
+        dirent-name puts
+    repeat
+
+    ls-dir close-dir drop
+  end
+;
+
 : make-msgbuf create 8 cells allot ;
 : get-type    @ ;
 : set-type    ! ;

@@ -27,38 +27,43 @@
   "      data" print-memfield
 ;
 
+create file-buffer 1024 allot
+0 value cat-file
+
+: print-file ( fname -- )
+  "r" open-file
+  if 0 = then
+    to cat-file
+    while file-buffer 1024 cat-file read-line 0 = begin
+        file-buffer print drop
+    repeat
+
+    cat-file close-file drop
+  end
+;
+
+: cat ( [[ files ]] -- )
+  while dup list-start != begin
+    print-file
+  repeat
+  drop
+;
+
 : make-msgbuf create 8 cells allot ;
 : get-type    @ ;
 : set-type    ! ;
 : is-keycode? get-type 0xbabe = ;
 : get-keycode 2 cells + @ ;
 
-1  value debug-msg
-2  value map-msg
-3  value mapto-msg
-4  value unmap-msg
-5  value grant-msg
-6  value grantto-msg
-7  value requestphys-msg
-8  value pagefault-msg
-9  value dumpmaps-msg
-10 value stop-msg
-11 value continue-msg
-12 value end-msg
-13 value kill-msg
+0 value c4_cur_cspace
+1 value c4_serv_port
+2 value c4_cur_aspace
+3 value c4_boot_info
+4 value c4_pager
+5 value c4_nameserver
+6 value c4_def_obj_end
 
-make-msgbuf buffer
-
-: msgtest
-  buffer recvmsg
-  if buffer is-keycode? then
-      "got a keypress: " print
-      buffer get-keycode . cr drop
-  else
-      "got message with type " print
-      buffer get-type . cr drop
-  end
-;
+( TODO: add words for new library functions, these don't work anymore )
 
 : do-send  buffer set-type buffer swap sendmsg ;
 : stop     stop-msg     do-send ;
@@ -74,22 +79,18 @@ list-start value [[
 
 : help
   [[
-    "  [filename] exec : load the elf from [filename] in the initfs and run it"
-    "  [addr] [len] /x : interactive hex dump of [len] words at [addr]"
-    "  [id] continue   : continue thread [id]"
-    "  [id] dumpmaps   : dump memory maps for the given thread [id] over debug"
-    "  meminfo         : display the amount of forth memory available"
-    "  memmaps         : display memory maps for the current address space"
-    "  print-archives  : list available base words"
-    "  ls              : list files contained in the initfs"
-    "  help            : print this help"
+    ( NOTE: this list is in reversed from printed order! )
+    "  [filename] exec   : load the elf from [filename] and run it"
+    "  memmaps           : display memory maps for the current address space"
+    "  meminfo           : display the amount of forth memory available"
+    "  [addr] [len] /x   : interactive hex dump of [len] words at [addr]"
+    "  [[ files ]] cat   : print all files given in [[ files ]] list"
+    "  [path] list-files : generate a list of files at [path]"
+    "  [path] print-file : print the file at [path]"
+    "  [path] ls         : list files at [path]"
+    "  print-archives    : list available base words"
+    "  help              : print this help"
   ]] puts-list
-;
-
-: initfs-print ( name -- )
-  tarfind dup tarsize
-  "size: " print .   cr drop
-  "addr: " print hex cr
 ;
 
 : puts-list

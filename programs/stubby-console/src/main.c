@@ -29,12 +29,20 @@ void start_nameserv(constate_t *state, const char *envp[]) {
 	               C4_CURRENT_CSPACE, C4_NAMESERVER);
 }
 
+#include <c4rt/interface/console.h>
+
 void start_servers(constate_t *state, const char *envp[]) {
 	const char *nullargs[] = {NULL};
 	const char *displayargs[] = {"/bin/display", "--nested", NULL};
 
 	state->console = spawn("/bin/display", displayargs, envp);
-	state->program = spawn("/bin/forth",    nullargs,    envp);
+
+	// XXX: wait for console to load before starting interpreter
+	//      reaaaally have to remove this at some point
+	console_put_char(state->console.endpoint, '\b');
+	console_put_char(state->console.endpoint, '\b');
+
+	state->program = spawn("/bin/forth",   nullargs,    envp);
 }
 
 void draw_background(constate_t *state) {
@@ -161,8 +169,6 @@ int main(int argc, const char *argv[], const char *envp[]){
 	nameserver_bind(C4_NAMESERVER, "/dev/console-alert",
 	                state.window.from_port);
 
-	start_servers(&state, envp);
-
 	static uint8_t worker_stack[PAGE_SIZE];
 	// TODO: make a library function to handle all of this
 	uint32_t tid = c4_create_thread(interface_loop, worker_stack + PAGE_SIZE, 0);
@@ -171,6 +177,7 @@ int main(int argc, const char *argv[], const char *envp[]){
 	c4_set_pager(tid, C4_PAGER);;
 	c4_continue_thread(tid);
 
+	start_servers(&state, envp);
 	update_loop();
 
 	return 0;

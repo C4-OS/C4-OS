@@ -2,6 +2,7 @@
 #include <nameserver/nameserver.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 typedef struct name_entry {
 	unsigned hash;
@@ -46,22 +47,44 @@ void handle_bind( uint32_t endpoint, unsigned hash ){
 	                 endpoint, hash, endpoint );
 }
 
-void handle_lookup( uint32_t responseq, unsigned hash ){
+void handle_lookup(uint32_t responseq, unsigned hash, bool forward) {
 	int32_t obj = lookup_name( hash );
 	c4_debug_printf("--- nameserver: %x:%x => %x\n", hash, responseq, obj);
 
 	if (obj > 0){
-		c4_cspace_grant( obj, responseq, CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE );
-
-	} else {
-		message_t msg = { .type = NAME_LOOKUP_FAILED, };
-		c4_msg_send(&msg, responseq);
+		c4_cspace_grant(obj, responseq, CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE);
+		goto done;
 	}
 
+	else if (forward) {
+		obj = nameserver_lookup_hash(C4_NAMESERVER, hash);
+
+		if (obj > 0) {
+			c4_cspace_grant(obj, responseq, CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE);
+			c4_cspace_remove(C4_CURRENT_CSPACE, obj);
+			goto done;
+		}
+
+		goto not_found;
+	}
+
+not_found: ;
+	message_t msg = { .type = NAME_LOOKUP_FAILED, };
+	c4_msg_send(&msg, responseq);
+
+done:
 	c4_cspace_remove(C4_CURRENT_CSPACE, responseq);
 }
 
 int main(int argc, char *argv[]){
+	bool forward_lookups = true;
+
+	for (int i = 0; i < argc; i++) {
+		if (strcmp(argv[i], "--no-forward") == 0) {
+			forward_lookups = false;
+		}
+	}
+
 	while ( true ){
 		message_t msg;
 		int32_t obj;
@@ -69,10 +92,10 @@ int main(int argc, char *argv[]){
 		int32_t id = 0;
 		int ret;
 
-		c4_debug_printf( "--- nameserver: waiting: %u\n", c4_get_id() );
-		int k = c4_msg_recieve( &msg, 1 );
-		c4_debug_printf( "--- nameserver: got %u\n", k );
-		c4_debug_printf( "--- nameserver: recieved message %u\n", msg.type );
+		c4_debug_printf("--- nameserver: waiting: %u\n", c4_get_id());
+		int k = c4_msg_recieve(&msg, C4_SERV_PORT);
+		c4_debug_printf("--- nameserver: got %u\n", k);
+		c4_debug_printf("--- nameserver: recieved message %u\n", msg.type);
 
 		C4_ASSERT(msg.type == MESSAGE_TYPE_GRANT_OBJECT);
 		temp = msg.data[5];
@@ -82,7 +105,7 @@ int main(int argc, char *argv[]){
 
 		switch ( msg.type ){
 			case NAME_LOOKUP:
-				handle_lookup(temp, msg.data[0]);
+				handle_lookup(temp, msg.data[0], forward_lookups);
 				break;
 
 			case NAME_BIND:

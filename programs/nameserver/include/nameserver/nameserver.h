@@ -47,20 +47,36 @@ static inline void nameserver_bind( unsigned server,
 static inline unsigned nameserver_lookup( unsigned server, const char *name ){
 	c4_debug_printf("--- thread %u: trying to find %s\n", c4_get_id(), name);
 
-	/*
-	int responseq = c4_msg_create_sync();
-	C4_ASSERT(responseq > 0);
-
-	int ret = c4_cspace_grant(responseq, server,
-	                          CAP_ACCESS | CAP_MODIFY
-	                          | CAP_MULTI_USE | CAP_SHARE);
-	C4_ASSERT(ret >= 0);
-	*/
 	int responseq = c4_send_temp_endpoint(server);
 
 	message_t msg = {
 		.type = NAME_LOOKUP,
 		.data = { nameserver_hash(name) },
+	};
+
+	c4_msg_send(&msg, responseq);
+	c4_msg_recieve(&msg, responseq);
+	c4_cspace_remove(C4_CURRENT_CSPACE, responseq);
+	C4_ASSERT(msg.type == MESSAGE_TYPE_GRANT_OBJECT);
+
+	if (msg.type == MESSAGE_TYPE_GRANT_OBJECT){
+		c4_debug_printf("--- thread %u: got %u\n", c4_get_id(), msg.data[5]);
+		return msg.data[5];
+	}
+
+	else {
+		return 0;
+	}
+}
+
+static inline unsigned nameserver_lookup_hash(unsigned server, unsigned hash){
+	c4_debug_printf("--- thread %u: trying to find 0x%x\n", c4_get_id(), hash);
+
+	int responseq = c4_send_temp_endpoint(server);
+
+	message_t msg = {
+		.type = NAME_LOOKUP,
+		.data = { hash },
 	};
 
 	c4_msg_send(&msg, responseq);

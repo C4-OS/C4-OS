@@ -24,20 +24,20 @@ static inline void do_newline( display_t *state ){
 
 static bootinfo_t *c4_bootinfo = BOOTINFO_ADDR;
 
-static void do_draw_char( display_t *state, char c ){
-	if ( c == '\n' ){
-		do_newline( state );
+static void do_draw_char(display_t *state, char c){
+	if (c == '\n') {
+		do_newline(state);
 
-	} else if ( c == '\b' ){
+	// TODO: allow backspacing to previous lines
+	} else if (c == '\b' && state->x > 0) {
 		state->x--;
-		state->draw_char( state, state->x, state->y, ' ' );
+		state->draw_char(state, state->x, state->y, ' ');
 
 	} else {
+		state->draw_char(state, state->x, state->y, c);
 
-		state->draw_char( state, state->x, state->y, c );
-
-		if ( state->x++ >= state->width ){
-			do_newline( state );
+		if (state->x++ >= state->width){
+			do_newline(state);
 		}
 	}
 }

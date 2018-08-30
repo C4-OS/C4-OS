@@ -136,14 +136,14 @@ c4_process_t elf_load_full( Elf32_Ehdr *elf,
 	int msgq = c4_msg_create_sync();
 
 	c4_cspace_copy(C4_CURRENT_CSPACE, msgq,         cspace, C4_SERV_PORT);
-	c4_cspace_copy(C4_CURRENT_CSPACE, nameserver,   cspace, C4_NAMESERVER);
 	c4_cspace_copy(C4_CURRENT_CSPACE, aspace,       cspace, C4_CURRENT_ADDRSPACE);
 	c4_cspace_copy(C4_CURRENT_CSPACE, C4_BOOT_INFO, cspace, C4_BOOT_INFO);
 	c4_cspace_copy(C4_CURRENT_CSPACE, pager,        cspace, C4_PAGER);
 
 	if (nameserver) {
-		c4_cspace_restrict( cspace, C4_NAMESERVER,
-							CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE );
+		c4_cspace_copy(C4_CURRENT_CSPACE, nameserver, cspace, C4_NAMESERVER);
+		c4_cspace_restrict(cspace, C4_NAMESERVER,
+		                   CAP_MODIFY | CAP_SHARE | CAP_MULTI_USE);
 	}
 
 	// map the bootinfo structure

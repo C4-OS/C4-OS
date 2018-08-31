@@ -47,17 +47,119 @@ void *ext2_read_block( ext2fs_t *fs, unsigned block ){
 	return error? NULL : (void *)buffer;
 }
 
+void *ext2_write_block( ext2fs_t *fs, unsigned block ){
+	void *buffer = (void *)block_buffer.vaddr;
+
+	if ( block > ext2_max_block(fs) ){
+		DEBUGF( "have request for block not in filesystem, %u\n", block );
+		return NULL;
+	}
+
+	unsigned sector = ext2_block_to_sector( fs, block );
+	unsigned size   = ext2_block_size_to_sectors( fs );
+	bool error = block_write(fs->block_device, &block_buffer, 0, sector, size);
+
+	return error? NULL : (void *)buffer;
+}
+
+void ext2_dump_unalloced_blocks(ext2fs_t *ext2, ext2_block_group_desc_t *des){
+	uint32_t last = 0;
+	uint32_t *table = NULL;
+	ext2_block_group_desc_t cdesc = *des;
+
+	for (unsigned i = 0; i < ext2->superblock.base.blocks_per_group; i += 32) {
+		uint32_t index = i / ext2_block_size(ext2);
+
+		if (!table || index != last) {
+			table = ext2_read_block(ext2, cdesc.block_map + index);
+			last = index;
+		}
+
+		uint32_t map = table[i - (index * ext2_block_size(ext2))];
+		DEBUGF("map @ %u: ", index, i);
+
+		for (unsigned k = 0; k < 32; k++) {
+			c4_debug_printf("%u", !!(map & 1));
+			map >>= 1;
+		}
+
+		c4_debug_printf("\n");
+	}
+}
+
 ext2_block_group_desc_t *ext2_get_block_descs( ext2fs_t *ext2 ){
 	unsigned start = (ext2_block_size(ext2) == 1024)? 2 : 1;
 
-	ext2_block_group_desc_t *desctab = ext2_read_block( ext2, start );
+	ext2_block_group_desc_t *desctab = ext2_read_block(ext2, start);
 
 	return desctab;
 }
 
+ext2_block_group_desc_t *ext2_write_block_descs( ext2fs_t *ext2 ){
+	unsigned start = (ext2_block_size(ext2) == 1024)? 2 : 1;
+
+	ext2_block_group_desc_t *desctab = ext2_write_block(ext2, start);
+
+	return desctab;
+}
+
+ext2_block_group_desc_t *ext2_get_block_desc(ext2fs_t *ext2, uint32_t index) {
+	if (index >= ext2_total_block_descs(ext2)) {
+		return NULL;
+	}
+
+	ext2_block_group_desc_t *desc = ext2_get_block_descs(ext2);
+	C4_ASSERT(desc != NULL);
+
+	return desc + index;
+}
+
+// TODO: add way to allocate multiple continguous blocks
+uint32_t ext2_alloc_block(ext2fs_t *ext2, uint32_t desc_index){
+	uint32_t last = 0;
+	uint32_t *table = NULL;
+	ext2_block_group_desc_t *desc = ext2_get_block_desc(ext2, desc_index);
+
+	if (!desc) {
+		return 0;
+	}
+
+	ext2_block_group_desc_t cdesc = *desc;
+
+	for (unsigned i = 0; i < ext2->superblock.base.blocks_per_group; i += 32) {
+		uint32_t index = i / ext2_block_size(ext2);
+
+		if (!table || index != last) {
+			table = ext2_read_block(ext2, cdesc.block_map + index);
+			last = index;
+		}
+
+		uint32_t map = table[i - (index * ext2_block_size(ext2))];
+
+		for (unsigned k = 0; k < 32; k++) {
+			if (((map >> k) & 1) == 0) {
+				map |= 1 << k;
+				table[i - (index * ext2_block_size(ext2))] = map;
+				ext2_write_block(ext2, cdesc.block_map + index);
+
+				// decrement the unallocated blocks counter and write the
+				// block descriptions back to disk
+				desc = ext2_get_block_desc(ext2, desc_index);
+				desc->unalloced_blocks -= 1;
+				ext2_write_block_descs(ext2);
+
+				return (desc_index * ext2->superblock.base.blocks_per_group) + (i + k);
+			}
+		}
+	}
+
+	// TODO: couldn't allocate a block in this group, try other groups
+	return 0;
+}
+
 ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
 							  ext2_inode_t *buffer,
-                              unsigned inode )
+                              uint32_t inode )
 {
 	ext2_block_group_desc_t *descs = ext2_get_block_descs( ext2 );
 
@@ -91,17 +193,93 @@ ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
 
 	*buffer = *inode_ptr;
 
-	return buffer;
+	return inode_ptr;
 }
 
-static unsigned iexp( unsigned i, unsigned n ){
-	unsigned result = 1;
+static uint32_t iexp( uint32_t i, uint32_t n ){
+	uint32_t result = 1;
 
-	for ( unsigned k = 0; k < n; k++ ){
+	for ( uint32_t k = 0; k < n; k++ ){
 		result *= i;
 	}
 
 	return result;
+}
+
+uint32_t ext2_inode_table_block(ext2fs_t *ext2, uint32_t inode) {
+	ext2_block_group_desc_t *descs = ext2_get_block_descs(ext2);
+	uint32_t group = ext2_block_group(ext2, inode);
+	uint32_t table = descs[group].inode_table;
+	uint32_t group_index = ext2_group_index(ext2, inode);
+	uint32_t offset = group_index / ext2_inodes_per_block( ext2 );
+
+	return table + offset;
+}
+
+// We need the inode number, rather than a struct pointer, so we can find
+// the block the inode is contained in, so that it can be written back to disk
+uint32_t ext2_inode_alloc_block(ext2fs_t *ext2,
+                                uint32_t inode,
+                                uint32_t block)
+{
+	uint32_t table_block = ext2_inode_table_block(ext2, inode);
+	ext2_inode_t inodebuf;
+	ext2_inode_t *inodeptr = ext2_get_inode(ext2, &inodebuf, inode);
+
+
+	if (block < 12) {
+		uint32_t n_block = ext2_alloc_block(ext2, ext2_block_group(ext2, inode));
+
+		if (!n_block) {
+			return 0;
+		}
+
+		// We need to re-read the inode structure since the disk buffer
+		// was overwritten during allocation
+		// TODO: re-reading all these structures isn't very efficient even
+		//       with the planned block device cache, will there need to be a
+		//       small filesystem block cache too?
+		ext2_inode_t *inodeptr = ext2_get_inode(ext2, &inodebuf, inode);
+		inodeptr->direct_ptr[block] = n_block;
+		ext2_write_block(ext2, table_block);
+
+		return n_block;
+
+	} else if (block < ext2_pointers_per_block(ext2) + 12) {
+		// single indirect reference, we may need to also allocate the
+		// block containing the references
+		if (inodeptr->single_indirect_ptr == 0) {
+			uint32_t n_block = ext2_alloc_block(ext2, ext2_block_group(ext2, inode));
+
+			if (!n_block) {
+				return 0;
+			}
+
+			ext2_inode_t *inodeptr = ext2_get_inode(ext2, &inodebuf, inode);
+			inodeptr->single_indirect_ptr = n_block;
+			inodebuf.single_indirect_ptr = n_block;
+			ext2_write_block(ext2, table_block);
+		}
+
+		uint32_t n_block = ext2_alloc_block(ext2, ext2_block_group(ext2, inode));
+
+		if (!n_block) {
+			return 0;
+		}
+
+		uint32_t index = block - 12;
+		uint32_t *ents = ext2_read_block(ext2, inodebuf.single_indirect_ptr);
+		ents[index] = n_block;
+		ext2_write_block(ext2, table_block);
+
+	} else if (block < iexp(ext2_pointers_per_block(ext2), 2) + 12) {
+		DEBUGF("doubly-indirect block allocation (unimplemented!)\n", 0);
+
+	} else if (block < iexp(ext2_pointers_per_block(ext2), 3) + 12) {
+		DEBUGF("triply-indirect block allocation (unimplemented!)\n", 0);
+	}
+
+	return 0;
 }
 
 void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
@@ -187,6 +365,8 @@ int main(int argc, char *argv[]) {
 	DEBUGF( "got here, %u\n", n );
 
 	for ( unsigned i = 0; i < n; i++ ){
+		descs = ext2_get_block_descs( &ext2 );
+
 		DEBUGF( "block descriptor %u:\n", i );
 		DEBUGF( "         block map: %u\n", descs[i].block_map );
 		DEBUGF( "         inode map: %u\n", descs[i].inode_map );
@@ -194,6 +374,12 @@ int main(int argc, char *argv[]) {
 		DEBUGF( "  unalloced blocks: %u\n", descs[i].unalloced_blocks );
 		DEBUGF( "  unalloced inodes: %u\n", descs[i].unalloced_inodes );
 		DEBUGF( "        total dirs: %u\n", descs[i].total_directories );
+
+		for (unsigned k = 0; k < 16; k++) {
+			descs = ext2_get_block_descs( &ext2 );
+			uint32_t nblock = ext2_alloc_block(&ext2, i);
+			DEBUGF("allocated block %u\n", nblock);
+		}
 	}
 
 	DEBUGF( "rootdir block group: %u\n", ext2_block_group( &ext2, 2 ));

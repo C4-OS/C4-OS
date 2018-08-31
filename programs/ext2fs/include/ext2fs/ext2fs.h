@@ -263,6 +263,10 @@ static inline unsigned ext2_group_index( ext2fs_t *ext2, unsigned inode ){
 	return (inode - 1) % ext2_inodes_per_group( ext2 );
 }
 
+static inline uint32_t ext2_pointers_per_block(ext2fs_t *fs){
+	return ext2_block_size(fs) / sizeof(uint32_t);
+}
+
 static inline bool ext2_is_directory( ext2_inode_t *inode ){
 	return ext2_inode_type(inode) == EXT2_INODE_TYPE_DIRECTORY;
 }

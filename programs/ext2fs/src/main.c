@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifndef NDEBUG
 #define DEBUGF( FORMAT, ... ) \
@@ -157,6 +158,50 @@ uint32_t ext2_alloc_block(ext2fs_t *ext2, uint32_t desc_index){
 	return 0;
 }
 
+// TODO: just copypasted ext2_alloc_block(), most of this can probably be
+//       merged into a helper function
+uint32_t ext2_alloc_inode(ext2fs_t *ext2, uint32_t desc_index){
+	uint32_t last = 0;
+	uint32_t *table = NULL;
+	ext2_block_group_desc_t *desc = ext2_get_block_desc(ext2, desc_index);
+
+	if (!desc) {
+		return 0;
+	}
+
+	ext2_block_group_desc_t cdesc = *desc;
+
+	for (unsigned i = 0; i < ext2->superblock.base.inodes_per_group; i += 32) {
+		uint32_t index = i / ext2_block_size(ext2);
+
+		if (!table || index != last) {
+			table = ext2_read_block(ext2, cdesc.inode_map + index);
+			last = index;
+		}
+
+		uint32_t map = table[i - (index * ext2_block_size(ext2))];
+
+		for (unsigned k = 0; k < 32; k++) {
+			if (((map >> k) & 1) == 0) {
+				map |= 1 << k;
+				table[i - (index * ext2_block_size(ext2))] = map;
+				ext2_write_block(ext2, cdesc.inode_map + index);
+
+				// decrement the unallocated inode counter and write the
+				// block descriptions back to disk
+				desc = ext2_get_block_desc(ext2, desc_index);
+				desc->unalloced_inodes -= 1;
+				ext2_write_block_descs(ext2);
+
+				return (desc_index * ext2->superblock.base.inodes_per_group) + (i + k);
+			}
+		}
+	}
+
+	// TODO: couldn't allocate an inode in this group, try other groups
+	return 0;
+}
+
 ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
 							  ext2_inode_t *buffer,
                               uint32_t inode )
@@ -216,61 +261,111 @@ uint32_t ext2_inode_table_block(ext2fs_t *ext2, uint32_t inode) {
 	return table + offset;
 }
 
+// Updates the on-disk inode table entry
+// TODO: re-reading all these structures isn't very efficient even
+//       with the planned block device cache, will there need to be a
+//       small filesystem block cache too?
+uint32_t ext2_inode_update(ext2fs_t *ext2, uint32_t inode, ext2_inode_t *iptr){
+	uint32_t table_block = ext2_inode_table_block(ext2, inode);
+	ext2_inode_t inodebuf;
+	ext2_inode_t *bufptr = ext2_get_inode(ext2, &inodebuf, inode);
+
+	if (!bufptr) {
+		return 0;
+	}
+
+	*bufptr = *iptr;
+	ext2_write_block(ext2, table_block);
+
+	return inode;
+}
+
+// initializes an inode after ext2_alloc_inode()
+uint32_t ext2_inode_init(ext2fs_t *ext2, uint32_t inode, uint16_t modes) {
+	if (!inode) {
+		return 0;
+	}
+
+	ext2_inode_t inodebuf;
+	memset(&inodebuf, 0, sizeof(ext2_inode_t));
+	inodebuf.modes = modes;
+
+	return ext2_inode_update(ext2, inode, &inodebuf);
+}
+
+uint32_t ext2_alloc_inode_type(ext2fs_t *ext2, uint32_t desc, uint16_t type) {
+	uint32_t temp = ext2_alloc_inode(ext2, desc);
+
+	if (!temp) {
+		C4_ASSERT(temp != 0);
+		return temp;
+	}
+
+	// TODO: handle modes properly
+	uint32_t foo = ext2_inode_init(ext2, temp, (type << 12) | 0777);
+	C4_ASSERT(foo == temp);
+
+	return temp;
+}
+
 // We need the inode number, rather than a struct pointer, so we can find
 // the block the inode is contained in, so that it can be written back to disk
 uint32_t ext2_inode_alloc_block(ext2fs_t *ext2,
                                 uint32_t inode,
                                 uint32_t block)
 {
-	uint32_t table_block = ext2_inode_table_block(ext2, inode);
 	ext2_inode_t inodebuf;
-	ext2_inode_t *inodeptr = ext2_get_inode(ext2, &inodebuf, inode);
-
+	C4_ASSERT(ext2_get_inode(ext2, &inodebuf, inode) != NULL);
 
 	if (block < 12) {
+		// don't allocate a block if a block is already present
+		if (inodebuf.direct_ptr[block]) {
+			return inodebuf.direct_ptr[block];
+		}
+
 		uint32_t n_block = ext2_alloc_block(ext2, ext2_block_group(ext2, inode));
 
 		if (!n_block) {
 			return 0;
 		}
 
-		// We need to re-read the inode structure since the disk buffer
-		// was overwritten during allocation
-		// TODO: re-reading all these structures isn't very efficient even
-		//       with the planned block device cache, will there need to be a
-		//       small filesystem block cache too?
-		ext2_inode_t *inodeptr = ext2_get_inode(ext2, &inodebuf, inode);
-		inodeptr->direct_ptr[block] = n_block;
-		ext2_write_block(ext2, table_block);
+		inodebuf.direct_ptr[block] = n_block;
+		ext2_inode_update(ext2, inode, &inodebuf);
 
 		return n_block;
 
 	} else if (block < ext2_pointers_per_block(ext2) + 12) {
 		// single indirect reference, we may need to also allocate the
 		// block containing the references
-		if (inodeptr->single_indirect_ptr == 0) {
+		if (inodebuf.single_indirect_ptr == 0) {
 			uint32_t n_block = ext2_alloc_block(ext2, ext2_block_group(ext2, inode));
 
 			if (!n_block) {
 				return 0;
 			}
 
-			ext2_inode_t *inodeptr = ext2_get_inode(ext2, &inodebuf, inode);
-			inodeptr->single_indirect_ptr = n_block;
 			inodebuf.single_indirect_ptr = n_block;
-			ext2_write_block(ext2, table_block);
+			ext2_inode_update(ext2, inode, &inodebuf);
+		}
+
+
+		uint32_t index = block - 12;
+		uint32_t *ents = ext2_read_block(ext2, inodebuf.single_indirect_ptr);
+
+		if (ents[index]) {
+			// don't allocate a block if a block is already present
+			return ents[index];
 		}
 
 		uint32_t n_block = ext2_alloc_block(ext2, ext2_block_group(ext2, inode));
-
 		if (!n_block) {
 			return 0;
 		}
 
-		uint32_t index = block - 12;
-		uint32_t *ents = ext2_read_block(ext2, inodebuf.single_indirect_ptr);
 		ents[index] = n_block;
-		ext2_write_block(ext2, table_block);
+		ext2_write_block(ext2, inodebuf.single_indirect_ptr);
+
+		return n_block;
 
 	} else if (block < iexp(ext2_pointers_per_block(ext2), 2) + 12) {
 		DEBUGF("doubly-indirect block allocation (unimplemented!)\n", 0);
@@ -284,24 +379,41 @@ uint32_t ext2_inode_alloc_block(ext2fs_t *ext2,
 
 void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block )
 {
+	uint32_t r_block = 0;
+
 	if ( block < 12 ){
-		return ext2_read_block( fs, inode->direct_ptr[block] );
+		//return ext2_read_block( fs, inode->direct_ptr[block] );
+		r_block = inode->direct_ptr[block];
+		goto do_block_read;
 	}
 
 	unsigned ptr_per_blk = ext2_block_size(fs) / sizeof(uint32_t);
 
 	if ( block < ptr_per_blk + 12 ){
+		if (!inode->single_indirect_ptr) {
+			goto do_zero_read;
+		}
+
 		unsigned index = block - 12;
 		uint32_t *ents = ext2_read_block( fs, inode->single_indirect_ptr );
-		return ext2_read_block( fs, ents[index] );
+		//return ext2_read_block( fs, ents[index] );
+		r_block = ents[index];
 
-	} else if ( block < iexp( ptr_per_blk, 2 ) + 12 ){
+	} else if ( block < iexp(ptr_per_blk, 2) + 12 ){
 		DEBUGF( "doing doubly-indirect block read\n", 0 );
 
-	} else if ( block < iexp( ptr_per_blk, 3 ) + 12 ){
+	} else if ( block < iexp(ptr_per_blk, 3) + 12 ){
 		DEBUGF( "doing triply-indirect block read\n", 0 );
 	}
 
+do_block_read:
+	if (r_block) {
+		return ext2_read_block(fs, r_block);
+	}
+
+do_zero_read:
+	// TODO: some sort of get_buffer()
+	memset((void *)block_buffer.vaddr, 0, ext2_block_size(fs));
 	return NULL;
 }
 

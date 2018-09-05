@@ -159,7 +159,7 @@ struct dirent *readdir(DIR *dirp) {
 		return NULL;
 	}
 
-	strlcpy(&dirp->dent.d_name, dirent.name, 256);
+	strlcpy(dirp->dent.d_name, dirent.name, 256);
 	dirp->dent.d_reclen = sizeof(struct dirent);
 	dirp->dent.d_ino    = dirent.inode;
 	dirp->dent.d_off    = 0;
@@ -187,7 +187,32 @@ size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
 	return ret;
 }
 
-size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
+size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp ){
+	//fs_connection_t conn = {};
+	const uint8_t *buffer = ptr;
+	size_t len = size * members;
+
+	size_t ret = 0;
+	int nread = 0;
+
+	while ((nread = fs_write_block(&fp->conn, buffer + ret, len)) > 0) {
+		ret += nread;
+		len -= nread;
+	}
+
+	return ret;
+
+}
+
+int fputc(int c, FILE *fp){
+	unsigned char wr = c;
+	fwrite(&wr, 1, 1, fp);
+	return c;
+}
+
+int fputs(const char *s, FILE *fp){
+	return fwrite(s, strlen(s), 1, fp);
+}
 
 char *fgets( char *s, int size, FILE *stream ){
 	size_t n = 0;

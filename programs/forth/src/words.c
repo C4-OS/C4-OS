@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <string.h>
 
 static inline void *popptr( minift_vm_t *vm ){
 	return (void *)minift_pop( vm, &vm->param_stack );
@@ -245,10 +246,28 @@ static bool c4_minift_read_line( minift_vm_t *vm ){
 }
 
 static bool c4_minift_write_file( minift_vm_t *vm ){
+	FILE *fp          = popptr( vm );
+	unsigned long len = popnum( vm );
+	char *buf         = popptr( vm );
+
+	unsigned long n = fwrite( buf, len, 1, fp );
+
+	pushnum( vm, n );
+	pushnum( vm, ferror(fp) );
+
 	return true;
 }
 
 static bool c4_minift_write_line( minift_vm_t *vm ){
+	FILE *fp  = popptr(vm);
+	char *buf = popptr(vm);
+
+	fputs(buf, fp);
+	fputc('\n', fp);
+
+	pushnum(vm, strlen(buf));
+	pushnum(vm, ferror(fp));
+
 	return true;
 }
 

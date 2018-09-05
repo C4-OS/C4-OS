@@ -204,11 +204,16 @@ typedef struct ext2fs {
 void ext2_server(ext2fs_t *fs);
 ext2_superblock_t *ext2_get_superblock( unsigned device, unsigned drive );
 void *ext2_read_block( ext2fs_t *fs, unsigned block );
+void *ext2_write_block( ext2fs_t *fs, unsigned block );
 ext2_block_group_desc_t *ext2_get_block_descs( ext2fs_t *ext2 );
 ext2_inode_t *ext2_get_inode( ext2fs_t *ext2,
 							  ext2_inode_t *buffer,
                               unsigned inode );
+uint32_t ext2_inode_update(ext2fs_t *ext2, uint32_t inode, ext2_inode_t *iptr);
 void *ext2_inode_read_block( ext2fs_t *fs, ext2_inode_t *inode, unsigned block );
+uint32_t ext2_inode_alloc_block(ext2fs_t *ext2,
+                                uint32_t inode,
+                                uint32_t block);
 
 static inline bool is_valid_ext2fs( ext2fs_t *ext2 ){
 	return ext2->superblock.base.signature == EXT2_SIGNATURE;

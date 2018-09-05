@@ -23,6 +23,7 @@ enum {
 	FS_MSG_GET_ROOT_DIR,
 	FS_MSG_GET_NODE_INFO,
 	FS_MSG_LIST_DIR,
+	FS_MSG_CREATE_DIR,
 	FS_MSG_SET_NODE,
 	FS_MSG_CREATE_NODE,
 	FS_MSG_READ_BLOCK,
@@ -38,10 +39,12 @@ enum {
 	FS_ERROR_NONE,
 	FS_ERROR_NOT_DIRECTORY,
 	FS_ERROR_NOT_CONNECTED,
+	FS_ERROR_NOT_IMPLEMENTED,
 	FS_ERROR_NOT_FOUND,
 	FS_ERROR_SERVER_BUSY,
 	FS_ERROR_QUEUE_FULL,
 	FS_ERROR_BAD_REQUEST,
+	FS_ERROR_NAME_TOO_LONG,
 };
 
 enum {
@@ -182,6 +185,45 @@ static inline int fs_list_dir( fs_connection_t *conn ){
 	return msg.data[0];
 }
 
+static inline int fs_create_dir( fs_connection_t *conn,
+                                 char *name,
+                                 size_t namelen )
+{
+	message_t msg = {
+		.type = FS_MSG_CREATE_DIR,
+		.data = { namelen },
+	};
+
+	c4_ringbuf_write(conn->server.ringbuf, name, namelen);
+	c4rt_connman_call(&conn->server, &msg);
+
+	if (msg.type == FS_MSG_ERROR) {
+		return -msg.data[0];
+	}
+
+	return 0;
+}
+
+static inline int fs_create_node( fs_connection_t *conn,
+                                  char *name,
+                                  size_t namelen )
+{
+	message_t msg = {
+		.type = FS_MSG_CREATE_NODE,
+		.data = { namelen },
+	};
+
+	c4_ringbuf_write(conn->server.ringbuf, name, namelen);
+	c4rt_connman_call(&conn->server, &msg);
+
+	if (msg.type == FS_MSG_ERROR) {
+		return -msg.data[0];
+	}
+
+	return 0;
+}
+
+
 static inline int fs_next_dirent( fs_connection_t *conn, fs_dirent_t *dirent ){
 	if (!c4_ringbuf_can_read(conn->server.ringbuf, sizeof(fs_dirent_t))) {
 		int n = fs_list_dir(conn);
@@ -215,6 +257,54 @@ static inline int fs_read_block( fs_connection_t *conn,
 
 	int n = c4_ringbuf_read(conn->server.ringbuf, buffer, maxlen);
 	conn->index += n;
+
+	return n;
+}
+
+static inline int fs_write_block( fs_connection_t *conn,
+                                  const void *buffer,
+                                  size_t len )
+{
+	int n = 1;
+
+	if (len == 0) {
+		return 0;
+	}
+
+	while (len > 0 && n > 0) {
+		n = c4_ringbuf_write(conn->server.ringbuf, (uint8_t *)buffer + conn->index, len);
+		C4_ASSERT(n != 0);
+
+		conn->index += n;
+		len -= n;
+
+		message_t msg = {
+			.type = FS_MSG_WRITE_BLOCK,
+			.data = { 0, },
+		};
+
+		c4rt_connman_call(&conn->server, &msg);
+
+		if (msg.type == FS_MSG_ERROR) {
+			c4_debug_printf("--- error: %u\n", msg.data[0]);
+			return -msg.data[0];
+		}
+	}
+
+	// continue sending write_block requests until the server is done processing
+	while (!c4_ringbuf_empty(conn->server.ringbuf)) {
+		message_t msg = {
+			.type = FS_MSG_WRITE_BLOCK,
+			.data = { 0, },
+		};
+
+		c4rt_connman_call(&conn->server, &msg);
+
+		if (msg.type == FS_MSG_ERROR) {
+			c4_debug_printf("--- error: %u\n", msg.data[0]);
+			return -msg.data[0];
+		}
+	}
 
 	return n;
 }

@@ -70,12 +70,15 @@ FILE *fopen( const char *path, const char *mode );
 int   fclose( FILE *fp );
 FILE *freopen( const char *path, const char *mode, FILE *fp );
 size_t fread( void *ptr, size_t size, size_t members, FILE *fp );
-size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
 char *fgets( char *s, int size, FILE *stream );
 int   fgetc( FILE *stream );
 int   getc( FILE *stream );
 int   getchar( void );
 int   ungetc( int c, FILE *stream );
+
+size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
+int fputc(int c, FILE *fp);
+int fputs(const char *s, FILE *fp);
 
 int   fprintf(FILE *fp, const char *fmt, ...);
 int  vfprintf(FILE *fp, const char *fmt, va_list ap);

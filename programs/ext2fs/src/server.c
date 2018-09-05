@@ -24,11 +24,14 @@ typedef struct {
 } client_state_t;
 
 static void handle_set_node(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_create_node(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
 static void handle_list_dir(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
 static void handle_find_name(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
 static void handle_get_rootdir(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
 static void handle_get_node_info(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
 static void handle_read_block(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_write_block(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
+static void handle_unimplemented(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req);
 
 void ext2_server(ext2fs_t *fs) {
 	while (true) {
@@ -68,7 +71,12 @@ void ext2_server(ext2fs_t *fs) {
 				handle_read_block(fs, conn, &request);
 				break;
 
+			case FS_MSG_WRITE_BLOCK:
+				handle_write_block(fs, conn, &request);
+				break;
+
 			default:
+				handle_unimplemented(fs, conn, &request);
 				break;
 
 		}
@@ -186,6 +194,10 @@ void handle_set_node( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	message_t msg = { .type = FS_MSG_COMPLETED, };
 	c4rt_connman_server_respond(conn, &msg);
 	//c4_msg_send( &msg, request->sender );
+}
+
+static void handle_create_node(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req){
+
 }
 
 static inline bool name_matches( ext2_dirent_t *dir, char *name, size_t len ){
@@ -391,4 +403,59 @@ done: ;
 
 	c4rt_connman_server_respond(conn, &msg);
 	//c4_msg_send( &msg, request->sender );
+}
+
+static void handle_write_block(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req){
+	size_t sent = 0;
+	client_state_t *cli = conn->prog_data;
+
+	if (!cli) {
+		send_error(conn, FS_ERROR_BAD_REQUEST);
+		return;
+	}
+
+	size_t blocksize = ext2_block_size(fs);
+	size_t index     = cli->index;
+	size_t offset    = index % blocksize;
+	// for now, avoid handling writes over block boundaries to keep things
+	// simple, the client just resends write requests until all data is
+	// written
+	size_t writesize = blocksize - offset;
+
+	if (c4_ringbuf_empty(conn->ringbuf)) {
+		goto done;
+	}
+
+	unsigned block = cli->index / blocksize;
+	uint32_t fs_block = ext2_inode_alloc_block(fs, cli->fsnode.inode, block);
+	//uint8_t *foo = ext2_inode_read_block(fs, &cli->e2node, block);
+	uint8_t *foo = ext2_read_block(fs, fs_block);
+	size_t read = c4_ringbuf_read(conn->ringbuf, foo + offset, writesize);
+
+	c4_debug_printf("writing %u bytes to block %u, offset: %u, writesize: %u\n",
+	                read, fs_block, offset, writesize);
+	ext2_write_block(fs, fs_block);
+
+	sent += read;
+	cli->index += read;
+	c4_debug_printf("new client index: %u\n", cli->index);
+
+	// TODO: free unused blocks if this truncates the file
+	/*
+	cli->e2node.lower_size = cli->index;
+	ext2_inode_update(fs, cli->fsnode.inode, &cli->e2node);
+	*/
+
+done: ;
+	message_t msg = {
+		.type = FS_MSG_COMPLETED,
+		.data = { sent },
+	};
+
+	c4rt_connman_server_respond(conn, &msg);
+}
+
+static
+void handle_unimplemented(ext2fs_t *fs, c4rt_conn_t *conn, message_t *req){
+	send_error(conn, FS_ERROR_NOT_IMPLEMENTED);
 }

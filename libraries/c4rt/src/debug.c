@@ -1,17 +1,10 @@
 #include <c4rt/c4rt.h>
 #include <stdarg.h>
+#include <string.h>
 
 const char *hexadecimal = "0123456789abcdef";
 const char *decimal     = "0123456789";
 const char *binary      = "01";
-
-static unsigned strlen(const char *s){
-	unsigned i = 0;
-
-	for ( i = 0; s[i]; i++ );
-
-	return i;
-}
 
 void c4_debug_putchar( char c ){
 	/*

@@ -1,6 +1,8 @@
 #ifndef _C4OS_LIBC_STRING_H
 #define _C4OS_LIBC_STRING_H 1
 
+#include <stddef.h>
+
 // string functions
 void *memcpy(void *dest, const void *src, size_t n);
 void *memset(void *s, int c, size_t n);

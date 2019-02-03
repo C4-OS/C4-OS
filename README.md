@@ -11,25 +11,22 @@ interpreter.
 
 ### What can it do?
 
-* Multithreading, userland drivers and pagers
+* Multithreading, SMP-capable
+* Userland drivers and pagers
+* Capability-oriented syscall API
 * Syncronous, asyncronous and channel IPC
+* Compositing display manager
+* Load static ELF executables from disk
+* Load and interpret forth programs from disk
 * Read and write PATA drives in PIO mode
   * DMA soon lol
 * Read from ext2 file systems, incomplete
-  * Write support coming soon
-* Framebuffer display with bitmap fonts
-* Load static ELF executables from disk
-* Load and interpret forth programs from disk
+  * Partial write support, very broken
 
-### What's in the works? (timeline: next few months)
+### What's in the works?
 
-* SMP support
-  * currently being merged into the kernel tree, following capabilities
-  * Will involve a scheduler rewrite and lots of new locking code
 * Software ports
   * lua, libpng, freetype2, zlib, the usual suspects
-  * currently on hold for capabilities, since that will have major impacts on
-    memory management
   * POSIX compatibility layer
 * Networking
   * e1000, r8139, virtio drivers planned
@@ -45,7 +42,7 @@ interpreter.
   * x86-64 relatively soon
   * support for some ARM-based SBCs (beaglebone, raspberry pi)
 
-### What's in the future? (timeline: 1+ years)
+### What's in the future?
 
 * Virtualization
   * Paravirtualization

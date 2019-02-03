@@ -201,6 +201,21 @@ static bool c4_minift_free( minift_vm_t *vm ){
 	return true;
 }
 
+
+static bool c4_minift_exec(minift_vm_t *vm) {
+	char *name = (char *)minift_pop(vm, &vm->param_stack);
+
+	// TODO: add a way to specify arguments/environment
+	const char *args[] = {name, NULL};
+	const char *env[] = {NULL};
+	c4_process_t *proc = c4a_alloc(&minift_heap, sizeof(c4_process_t));
+	*proc = spawn(name, args, env);
+
+	minift_push(vm, &vm->param_stack, (uintptr_t)proc);
+
+	return true;
+}
+
 static bool c4_minift_open_file( minift_vm_t *vm ){
 	char *fam  = popptr( vm );
 	char *name = popptr( vm );
@@ -319,6 +334,7 @@ static minift_archive_entry_t c4_words[] = {
 	{ "consinfo", c4_minift_console_info, 0 },
 	{ "lookup",   c4_minift_name_lookup, 0 },
 	{ "key",      c4_minift_key, 0 },
+	{ "exec",     c4_minift_exec, 0 },
 
 	// allocation words
 	// TODO: implement 'resize' once realloc is implemented in c4alloc

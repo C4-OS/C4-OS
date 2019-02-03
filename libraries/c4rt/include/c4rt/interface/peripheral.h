@@ -25,6 +25,10 @@ static inline void c4rt_peripheral_disconnect(uint32_t port) {
     // TODO: fill this in
 }
 
+static inline bool c4rt_peripheral_have_event(message_t *msg, uint32_t port) {
+    return c4_msg_recieve_async(msg, port, 0);
+}
+
 static inline void c4rt_peripheral_wait_event(message_t *msg, uint32_t port) {
     c4_msg_recieve_async(msg, port, MESSAGE_ASYNC_BLOCK);
 }

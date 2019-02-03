@@ -184,11 +184,28 @@ static void draw_window(wm_t *state, window_t *window) {
 	}
 }
 
+static void draw_window_decoration(wm_t *state, window_t *window) {
+	stubby_rect_t titlebar = (stubby_rect_t){
+		.coord = (stubby_point_t) {
+			.x = window->rect.coord.x - 2,
+			.y = window->rect.coord.y - 25,
+		},
+		.height = 25,
+		.width = window->rect.width + 4,
+	};
+
+	// XXX: redraw full border and title bar, even if they're not touched
+	// TODO: more efficient
+	draw_rect(state, &titlebar, 0x202020);
+}
+
 static void draw_windows(wm_t *state) {
 	window_node_t *node = state->winlist.start;
 
 	for (; node; node = node->next) {
 		draw_window(state, &node->window);
+		// TODO: have flag to draw decorations conditionally
+		draw_window_decoration(state, &node->window);
 	}
 }
 
@@ -369,24 +386,27 @@ static void event_loop(wm_t *state) {
 
 		c4rt_peripheral_wait_event(&msg, state->peripherals);
 
-		switch (msg.type) {
-			case MOUSE_MSG_EVENT:
-				mouse_parse_event(&msg, &mev);
-				handle_mouse(state, &mev);
-				break;
+		do {
+			switch (msg.type) {
+				case MOUSE_MSG_EVENT:
+					mouse_parse_event(&msg, &mev);
+					handle_mouse(state, &mev);
+					break;
 
-			case KEYBOARD_MSG_EVENT:
-				keyboard_parse_event(&msg, &kev);
-				handle_keyboard(state, &kev);
-				break;
+				case KEYBOARD_MSG_EVENT:
+					keyboard_parse_event(&msg, &kev);
+					handle_keyboard(state, &kev);
+					break;
 
-			case STUBBYWM_UPDATE:
-				handle_client_update(state, &msg);
-				break;
+				case STUBBYWM_UPDATE:
+					handle_client_update(state, &msg);
+					break;
 
-			default:
-				break;
-		}
+				default:
+					break;
+			}
+
+		} while (c4rt_peripheral_have_event(&msg, state->peripherals));
 	}
 }
 

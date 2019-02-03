@@ -96,7 +96,6 @@ clean: $(ALL_CLEAN)
 test: image
 	qemu-system-i386 \
 		-hda $(BUILD)/test.img \
-		-serial stdio -m 32 -s -enable-kvm
-
+		-serial stdio -m 32 -s -enable-kvm -smp 4 -cpu max,migratable=false
 .PHONY: image
 image: $(BUILD)/test.img

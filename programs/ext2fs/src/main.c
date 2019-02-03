@@ -486,12 +486,6 @@ int main(int argc, char *argv[]) {
 		DEBUGF( "  unalloced blocks: %u\n", descs[i].unalloced_blocks );
 		DEBUGF( "  unalloced inodes: %u\n", descs[i].unalloced_inodes );
 		DEBUGF( "        total dirs: %u\n", descs[i].total_directories );
-
-		for (unsigned k = 0; k < 16; k++) {
-			descs = ext2_get_block_descs( &ext2 );
-			uint32_t nblock = ext2_alloc_block(&ext2, i);
-			DEBUGF("allocated block %u\n", nblock);
-		}
 	}
 
 	DEBUGF( "rootdir block group: %u\n", ext2_block_group( &ext2, 2 ));

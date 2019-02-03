@@ -1,1 +1,3 @@
 *.o
+cross/*/
+cross/*tar.*

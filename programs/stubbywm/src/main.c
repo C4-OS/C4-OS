@@ -185,18 +185,62 @@ static void draw_window(wm_t *state, window_t *window) {
 }
 
 static void draw_window_decoration(wm_t *state, window_t *window) {
+	// TODO: make configurable
+	uint32_t color = 0x202020;
+	unsigned border_size = 3;
+
 	stubby_rect_t titlebar = (stubby_rect_t){
 		.coord = (stubby_point_t) {
-			.x = window->rect.coord.x - 2,
+			.x = window->rect.coord.x - border_size,
 			.y = window->rect.coord.y - 25,
 		},
 		.height = 25,
-		.width = window->rect.width + 4,
+		.width = window->rect.width + (border_size * 2),
+	};
+
+	stubby_rect_t text_placeholder = (stubby_rect_t){
+		.coord = (stubby_point_t) {
+			.x = window->rect.coord.x + 5 - border_size,
+			.y = window->rect.coord.y - 20,
+		},
+		.height = 15,
+		.width = window->rect.width / 4,
+	};
+
+	stubby_rect_t left_border = (stubby_rect_t){
+		.coord = (stubby_point_t) {
+			.x = window->rect.coord.x - border_size,
+			.y = window->rect.coord.y,
+		},
+		.height = window->rect.height + border_size,
+		.width = border_size,
+	};
+
+	stubby_rect_t right_border = (stubby_rect_t){
+		.coord = (stubby_point_t) {
+			.x = window->rect.coord.x + window->rect.width,
+			.y = window->rect.coord.y,
+		},
+		.height = window->rect.height + border_size,
+		.width = border_size,
+	};
+
+	stubby_rect_t bottom_border = (stubby_rect_t){
+		.coord = (stubby_point_t) {
+			.x = window->rect.coord.x,
+			.y = window->rect.coord.y + window->rect.height,
+		},
+		.height = border_size,
+		.width = window->rect.width,
 	};
 
 	// XXX: redraw full border and title bar, even if they're not touched
 	// TODO: more efficient
-	draw_rect(state, &titlebar, 0x202020);
+	draw_rect(state, &titlebar, color);
+	draw_rect(state, &text_placeholder, 0xc0c0c0);
+	draw_rect(state, &left_border, color);
+	draw_rect(state, &right_border, color);
+	draw_rect(state, &bottom_border, color);
 }
 
 static void draw_windows(wm_t *state) {
@@ -207,6 +251,51 @@ static void draw_windows(wm_t *state) {
 		// TODO: have flag to draw decorations conditionally
 		draw_window_decoration(state, &node->window);
 	}
+}
+
+static void draw_status_bar(wm_t *state) {
+	stubby_rect_t bar = (stubby_rect_t) {
+		.coord = (stubby_point_t) {
+			.x = 0,
+			.y = state->info.height - 25,
+		},
+		.width = state->info.width,
+		.height = 25,
+	};
+
+	// TODO: replace these with image/text drawing library calls
+	stubby_rect_t icon_placeholder = (stubby_rect_t) {
+		.coord = (stubby_point_t) {
+			.x = 5,
+			.y = state->info.height - 20,
+		},
+		.width = 15,
+		.height = 15,
+	};
+
+	stubby_rect_t text_placeholder = (stubby_rect_t) {
+		.coord = (stubby_point_t) {
+			.x = 25,
+			.y = state->info.height - 20,
+		},
+		.width = 60,
+		.height = 15,
+	};
+
+	stubby_rect_t time_placeholder = (stubby_rect_t) {
+		.coord = (stubby_point_t) {
+			.x = state->info.width - 65,
+			.y = state->info.height - 20,
+		},
+		.width = 60,
+		.height = 15,
+	};
+
+	// TODO: more efficient
+	draw_rect(state, &bar, 0xc0c0c0);
+	draw_rect(state, &icon_placeholder, 0x202020);
+	draw_rect(state, &text_placeholder, 0x808080);
+	draw_rect(state, &time_placeholder, 0x808080);
 }
 
 // TODO: merge these into c4rt at some point, these are pretty useful
@@ -380,6 +469,7 @@ static void event_loop(wm_t *state) {
 	while (true) {
 		draw_background(state);
 		draw_windows(state);
+		draw_status_bar(state);
 		draw_mouse(state);
 		draw_framebuffer(state);
 		reset_updates(state);

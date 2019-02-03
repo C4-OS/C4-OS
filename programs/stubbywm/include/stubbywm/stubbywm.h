@@ -7,7 +7,7 @@
 #include <c4rt/interface/framebuffer.h>
 #include <c4rt/c4rt.h>
 
-enum { MAX_UPDATES = 32, };
+enum { MAX_UPDATES = 128, };
 
 typedef struct wm wm_t;
 typedef struct point stubby_point_t;

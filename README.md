@@ -5,7 +5,7 @@ The C4 Operating System
 
 C4-OS aims to be a relatively complete hobby operating system built around the
 C4 kernel, which is an L4-like microkernel. Right now, it's composed of a the
-kernel (non-SMP, thread-based IPC), a few low-level utility libraries such as
+kernel, a few low-level utility libraries such as
 the c4 runtime, some PC device drivers, some test programs, and a forth
 interpreter.
 

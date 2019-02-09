@@ -18,19 +18,21 @@ enum {
 };
 
 enum {
-	MOUSE_COMMAND_COMPAQ_STATUS    = 0x20,
-	MOUSE_COMMAND_SET_STATUS       = 0x60,
-	MOUSE_COMMAND_SEND             = 0xd4,
-	MOUSE_COMMAND_AUX_ENABLE       = 0xa8,
-	MOUSE_COMMAND_GET_ID           = 0xf2,
-	MOUSE_COMMAND_SET_SAMPLE_RATE  = 0xf3,
-	MOUSE_COMMAND_ENABLE_STREAMING = 0xf4,
-	MOUSE_COMMAND_SET_DEFAULTS     = 0xf6,
-	MOUSE_COMMAND_RESET            = 0xff,
+	MOUSE_COMMAND_COMPAQ_STATUS     = 0x20,
+	MOUSE_COMMAND_SET_STATUS        = 0x60,
+	MOUSE_COMMAND_AUX_ENABLE        = 0xa8,
+	MOUSE_COMMAND_SEND              = 0xd4,
+	MOUSE_COMMAND_REQUEST_A_PACKET  = 0xeb,
+	MOUSE_COMMAND_GET_ID            = 0xf2,
+	MOUSE_COMMAND_SET_SAMPLE_RATE   = 0xf3,
+	MOUSE_COMMAND_DISABLE_STREAMING = 0xf5,
+	MOUSE_COMMAND_ENABLE_STREAMING  = 0xf4,
+	MOUSE_COMMAND_SET_DEFAULTS      = 0xf6,
+	MOUSE_COMMAND_RESET             = 0xff,
 };
 
 static bool wait_read(void) {
-	unsigned timeout = 123456;
+	unsigned timeout = 1234;
 
 	while (timeout--) {
 		if (c4_in_byte(0x64) & 1) {
@@ -43,7 +45,7 @@ static bool wait_read(void) {
 }
 
 static bool wait_write(void) {
-	unsigned timeout = 123456;
+	unsigned timeout = 1234;
 
 	while (timeout--) {
 		if ((c4_in_byte(0x64) & 2) == 0) {
@@ -71,8 +73,6 @@ static uint8_t mouse_command(uint8_t command) {
 	return mouse_read();
 }
 
-static bool have_mouse = false;
-
 void mouse_init(void) {
 	mouse_write(MOUSE_STATUS_PORT, MOUSE_COMMAND_AUX_ENABLE);
 	mouse_write(MOUSE_STATUS_PORT, MOUSE_COMMAND_COMPAQ_STATUS);
@@ -80,7 +80,7 @@ void mouse_init(void) {
 
 	uint8_t status = c4_in_byte(MOUSE_DATA_PORT);
 	status |= 2;
-	status &= ~(1 << 5);
+	//status &= ~(1 << 5);
 	mouse_write(MOUSE_STATUS_PORT, MOUSE_COMMAND_SET_STATUS);
 	mouse_write(MOUSE_DATA_PORT, status);
 	c4_debug_printf("--- mouse: initialized stuff: %x\n", status);
@@ -141,20 +141,25 @@ static void event_thread(void) {
 	unsigned counter = 0;
 
 	while (true) {
+		// TODO: this is still horribly broken, no idea why...
+		//       need to look up more on how ps2 works, maybe buffering?
+		//       could also be just signaling EOI in the kernel before
+		//       the interrupt is actually handled, in which case we need
+		//       some sort protocol for userland to signal EOI
 		message_t msg;
 
 		c4_msg_recieve_async(&msg, interrupt_queue, MESSAGE_ASYNC_BLOCK);
-		wait_read();
-
 		if (!(c4_in_byte(MOUSE_STATUS_PORT) & MOUSE_STATUS_IS_MOUSE)) {
 			continue;
 		}
 
-		things[counter++] = c4_in_byte(0x60);
+		while (c4_in_byte(MOUSE_STATUS_PORT) & MOUSE_STATUS_CAN_READ) {
+			things[counter++] = c4_in_byte(0x60);
 
-		if (counter == 3) {
-			dispatch(things);
-			counter = 0;
+			if (counter == 3) {
+				dispatch(things);
+				counter = 0;
+			}
 		}
 	}
 }

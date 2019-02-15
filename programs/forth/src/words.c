@@ -29,6 +29,14 @@ static inline void pushnum( minift_vm_t *vm, unsigned long n ){
 	minift_push( vm, &vm->param_stack, n );
 }
 
+static bool c4_minift_usleep(minift_vm_t *vm) {
+	unsigned long useconds = minift_pop(vm, &vm->param_stack);
+
+	c4_sleep(useconds);
+
+	return true;
+}
+
 static bool c4_minift_sendmsg( minift_vm_t *vm ){
 	unsigned long target = minift_pop( vm, &vm->param_stack );
 	unsigned long temp   = minift_pop( vm, &vm->param_stack );
@@ -335,6 +343,7 @@ static minift_archive_entry_t c4_words[] = {
 	{ "lookup",   c4_minift_name_lookup, 0 },
 	{ "key",      c4_minift_key, 0 },
 	{ "exec",     c4_minift_exec, 0 },
+	{ "usleep",   c4_minift_usleep },
 
 	// allocation words
 	// TODO: implement 'resize' once realloc is implemented in c4alloc

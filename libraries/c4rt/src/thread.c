@@ -6,6 +6,12 @@ void c4_exit( void ){
 	DO_SYSCALL( SYSCALL_THREAD_EXIT, 0, 0, 0, 0, unused );
 }
 
+void c4_sleep(uint32_t useconds) {
+	int unused = 0;
+
+	DO_SYSCALL(SYSCALL_THREAD_SLEEP, useconds, 0, 0, 0, unused);
+}
+
 int c4_info( unsigned action ){
 	int ret = 0;
 

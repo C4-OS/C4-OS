@@ -29,7 +29,8 @@ enum {
 	  : "a"(N), "D"(A), "S"(B), "d"(C), "b"(D) \
 	  : "memory" );
 
-void c4_exit( void );
+void c4_exit(void);
+void c4_sleep(uint32_t useconds);
 
 // ipc functions
 int c4_msg_create_sync( void );

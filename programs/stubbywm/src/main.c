@@ -18,6 +18,11 @@
 
 #define STUBBYWM_ENABLE_TRANSPARENCY 1
 
+// TODO: make configurable
+#define STUBBYWM_WINDOW_COLOR  0x202020
+#define STUBBYWM_BORDER_SIZE   3
+#define STUBBYWM_TITLEBAR_SIZE 25
+
 static void reset_updates(wm_t *wm) {
 	wm->num_updates = 0;
 }
@@ -192,22 +197,20 @@ static void draw_window(wm_t *state, window_t *window) {
 }
 
 static void draw_window_decoration(wm_t *state, window_t *window) {
-	// TODO: make configurable
-	uint32_t color = 0x202020;
-	unsigned border_size = 3;
+	// TODO: scale text/placeholders in relation to STUBBYWM_TITLEBAR_SIZE
 
 	stubby_rect_t titlebar = (stubby_rect_t){
 		.coord = (stubby_point_t) {
-			.x = window->rect.coord.x - border_size,
-			.y = window->rect.coord.y - 25,
+			.x = window->rect.coord.x - STUBBYWM_BORDER_SIZE,
+			.y = window->rect.coord.y - STUBBYWM_TITLEBAR_SIZE,
 		},
-		.height = 25,
-		.width = window->rect.width + (border_size * 2),
+		.height = STUBBYWM_TITLEBAR_SIZE,
+		.width = window->rect.width + (STUBBYWM_BORDER_SIZE * 2),
 	};
 
 	stubby_rect_t text_placeholder = (stubby_rect_t){
 		.coord = (stubby_point_t) {
-			.x = window->rect.coord.x + 5 - border_size,
+			.x = window->rect.coord.x + 5 - STUBBYWM_BORDER_SIZE,
 			.y = window->rect.coord.y - 20,
 		},
 		.height = 15,
@@ -216,11 +219,11 @@ static void draw_window_decoration(wm_t *state, window_t *window) {
 
 	stubby_rect_t left_border = (stubby_rect_t){
 		.coord = (stubby_point_t) {
-			.x = window->rect.coord.x - border_size,
+			.x = window->rect.coord.x - STUBBYWM_BORDER_SIZE,
 			.y = window->rect.coord.y,
 		},
-		.height = window->rect.height + border_size,
-		.width = border_size,
+		.height = window->rect.height + STUBBYWM_BORDER_SIZE,
+		.width = STUBBYWM_BORDER_SIZE,
 	};
 
 	stubby_rect_t right_border = (stubby_rect_t){
@@ -228,8 +231,8 @@ static void draw_window_decoration(wm_t *state, window_t *window) {
 			.x = window->rect.coord.x + window->rect.width,
 			.y = window->rect.coord.y,
 		},
-		.height = window->rect.height + border_size,
-		.width = border_size,
+		.height = window->rect.height + STUBBYWM_BORDER_SIZE,
+		.width = STUBBYWM_BORDER_SIZE,
 	};
 
 	stubby_rect_t bottom_border = (stubby_rect_t){
@@ -237,17 +240,17 @@ static void draw_window_decoration(wm_t *state, window_t *window) {
 			.x = window->rect.coord.x,
 			.y = window->rect.coord.y + window->rect.height,
 		},
-		.height = border_size,
+		.height = STUBBYWM_BORDER_SIZE,
 		.width = window->rect.width,
 	};
 
 	// XXX: redraw full border and title bar, even if they're not touched
 	// TODO: more efficient
-	draw_rect(state, &titlebar, color);
+	draw_rect(state, &titlebar, STUBBYWM_WINDOW_COLOR);
 	draw_rect(state, &text_placeholder, 0xc0c0c0);
-	draw_rect(state, &left_border, color);
-	draw_rect(state, &right_border, color);
-	draw_rect(state, &bottom_border, color);
+	draw_rect(state, &left_border, STUBBYWM_WINDOW_COLOR);
+	draw_rect(state, &right_border, STUBBYWM_WINDOW_COLOR);
+	draw_rect(state, &bottom_border, STUBBYWM_WINDOW_COLOR);
 }
 
 static void draw_windows(wm_t *state) {
@@ -367,6 +370,15 @@ static void update_mouse_region(wm_t *wm) {
 static void update_window_region(wm_t *wm, window_t *window) {
 	stubby_point_t a = window->rect.coord;
 	stubby_point_t b = rect_max_coord(wm, &window->rect);
+
+	// adjust size to include window decorations
+	a.x -= STUBBYWM_BORDER_SIZE;
+	a.y -= STUBBYWM_TITLEBAR_SIZE;
+	b.x += STUBBYWM_BORDER_SIZE;
+	b.y += STUBBYWM_BORDER_SIZE;
+
+	normalize_point(wm, &a);
+	normalize_point(wm, &b);
 
 	update_region(wm, &a, &b);
 }

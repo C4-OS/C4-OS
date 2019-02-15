@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #define STUBBYWM_ENABLE_TRANSPARENCY 1
 
@@ -33,12 +34,17 @@ static void normalize_point(wm_t *wm, stubby_point_t *pt) {
 		pt->y = wm->info.height;
 }
 
+static void set_full_update(wm_t *wm);
 static wm_update_t *alloc_update(wm_t *wm) {
 	wm_update_t *ret = wm->updates + wm->num_updates;
 	wm->num_updates++;
 
-	// TODO: just do a full update if the maximum number of updates is reached
-	C4_ASSERT(wm->num_updates < MAX_UPDATES);
+	if (wm->num_updates >= MAX_UPDATES) {
+		reset_updates(wm);
+		set_full_update(wm);
+		c4_debug_printf("--- stubbywm: did full update!\n");
+	}
+
 	wm->num_updates %= MAX_UPDATES;
 
 	return ret;
@@ -131,7 +137,8 @@ static void draw_background(wm_t *state) {
 
 		for (unsigned y = up.lower.y; y < up.upper.y; y++) {
 			for (unsigned x = up.lower.x; x < up.upper.x; x++) {
-				uint32_t pixel = 0x202000 | (x ^ y);
+				uint8_t thing = ((x ^ y) >> 2) + 0xa0;
+				uint32_t pixel = ((thing >> 1) << 16) | (thing << 9) | thing;
 				draw_pixel(state, x, y, pixel);
 			}
 		}
@@ -474,6 +481,9 @@ static void event_loop(wm_t *state) {
 		draw_framebuffer(state);
 		reset_updates(state);
 
+		// XXX: ghetto 60fps limiter, need to account for time spent
+		//      redrawing, and adapt sleep time as needed
+		usleep(1000000 / 60);
 		c4rt_peripheral_wait_event(&msg, state->peripherals);
 
 		do {

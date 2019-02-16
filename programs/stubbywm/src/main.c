@@ -658,23 +658,6 @@ int main(int argc, char *argv[]) {
 
 	nameserver_bind(C4_NAMESERVER, "stubbywm", C4_SERV_PORT);
 
-	// create some dummy windows
-	window_t w = window_create(256, 256);
-	window_set_pos(&w, 128, 128);
-	window_list_insert(&state.winlist, &w);
-
-	w = window_create(192, 192);
-	window_set_pos(&w, 256, 256);
-	window_list_insert(&state.winlist, &w);
-
-	w = window_create(64, 256);
-	window_set_pos(&w, 384, 384);
-	window_list_insert(&state.winlist, &w);
-
-	w = window_create(256, 128);
-	window_set_pos(&w, 512, 512);
-	window_list_insert(&state.winlist, &w);
-
 	static uint8_t worker_stack[PAGE_SIZE];
 
 	// TODO: make a library function to handle all of this

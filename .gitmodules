@@ -7,3 +7,6 @@
 [submodule "libraries/miniforth"]
 	path = libraries/miniforth
 	url = https://github.com/mushrom/miniforth.git
+[submodule "libraries/musl"]
+	path = libraries/musl
+	url = https://github.com/C4-OS/musl.git

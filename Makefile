@@ -12,10 +12,11 @@ do_all: all
 -include $(wildcard $(LIBRARY_ROOT)/*/objs.mk)
 # and for sigma0 (this should be moved to the programs folder)
 -include sigma0/objs.mk
+-include $(PORTS_ROOT)/objs.mk
 
 LIBC_STUFF    = $(BUILD)/lib/crt0.o $(BUILD)/lib/libc.a
-ALL_TARGETS  += kernel $(LIBC_STUFF) sigma0 $(ALL_PROGRAMS)
-ALL_CLEAN    += kernel-clean
+ALL_TARGETS  += kernel $(LIBC_STUFF) sigma0 $(ALL_PROGRAMS) $(PORTS)
+ALL_CLEAN    += kernel-clean ports-clean
 ALL_INCLUDES  = $(patsubst -I%,%,$(KERNEL_INCLUDE) $(LIBRARY_INCLUDE) $(PROGRAM_INCLUDE))
 
 .PHONY: all
@@ -31,6 +32,7 @@ $(BUILD): $(BUILD)/usr/include
 	mkdir -p $(BUILD)/src
 	mkdir -p $(BUILD)/lib
 	mkdir -p $(BUILD)/tree
+	mkdir -p $(BUILD)/ports
 
 $(BUILD)/c4-$(ARCH): $(BUILD)
 	@cd kernel; \
@@ -59,11 +61,11 @@ $(BUILD)/test.img: $(ALL_TARGETS)
 		$(INITSYS_PROGRAMS)
 
 .PHONY: toolchain
-toolchain: $(BUILD)
+toolchain: sysroot $(BUILD)
 	cd cross; make SYSROOT=$(BUILD) MAKEARGS=-j4
 
 .PHONY: kernel
-kernel: $(BUILD)/c4-$(ARCH)
+kernel: sysroot $(BUILD)/c4-$(ARCH)
 
 .PHONY: kernel-clean
 kernel-clean:
@@ -71,7 +73,13 @@ kernel-clean:
 	rm -f $(BUILD)/c4-$(ARCH)
 
 .PHONY: sigma0
-sigma0: $(BUILD)/c4-$(ARCH)-sigma0
+sigma0: sysroot $(BUILD)/c4-$(ARCH)-sigma0
+
+.PHONY: libc
+libc: sysroot $(LIBC_STUFF)
+
+.PHONY: ports
+ports: $(PORTS)
 
 .PHONY: initfs-clean
 initfs-clean:
@@ -82,7 +90,7 @@ initfs-clean:
 sysroot: $(BUILD)
 
 .PHONY: sysincludes
-sysincludes: $(BUILD)/include/usr/include
+sysincludes: sysroot $(BUILD)/include/usr/include
 
 .PHONY: clean-sysroot
 clean-sysroot:
@@ -97,5 +105,6 @@ test: image
 	qemu-system-i386 \
 		-hda $(BUILD)/test.img \
 		-serial stdio -m 32 -s -enable-kvm -smp 4 -cpu max,migratable=false
+
 .PHONY: image
 image: $(BUILD)/test.img

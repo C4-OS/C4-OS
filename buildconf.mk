@@ -4,6 +4,7 @@ BUILD        = $(PWD)/.buildtmp
 KERNEL_ROOT  = $(PWD)/kernel
 PROGRAM_ROOT = $(PWD)/programs
 LIBRARY_ROOT = $(PWD)/libraries
+PORTS_ROOT   = $(PWD)/ports
 TOOL_ROOT    = $(PWD)/tools
 
 KERNEL_INCLUDE    = -I$(KERNEL_ROOT)/include/ \
@@ -15,11 +16,15 @@ INTERFACE_INCLUDE = -I$(PWD)
 C4_CC     = $(CROSS)gcc
 C4_LD     = $(CROSS)ld
 C4_CXX    = $(CROSS)g++
-C4_CFLAGS = -Wall -g
+C4_CFLAGS = -Wall -Os
 
 %.o: %.c
 	@echo CC $< -c -o $@
 	@$(C4_CC) $(C4_CFLAGS) $< -c -o $@
+
+PORTS += $(BUILD)/ports/freetype
+PORTS += $(BUILD)/ports/lua
+PORTS += $(BUILD)/ports/zlib
 
 INITFS_PROGRAMS  = $(BUILD)/bin/nameserver
 INITFS_PROGRAMS += $(BUILD)/bin/ata

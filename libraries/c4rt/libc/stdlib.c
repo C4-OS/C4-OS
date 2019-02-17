@@ -6,6 +6,7 @@
 #include <c4rt/addrman.h>
 #include <c4rt/elf.h>
 #include <c4rt/c4rt.h>
+#include <c4rt/prng.h>
 
 WEAK void *malloc( size_t size ){
 	return c4a_alloc( getc4heap(), size );
@@ -29,6 +30,18 @@ void *calloc( size_t members, size_t size ){
 
 // TODO: implement realloc()
 void *realloc( void *ptr, size_t size );
+
+int rand(void) {
+	return (int)c4rt_prng_u32();
+}
+
+void srand(unsigned int seed) {
+	c4rt_prng_seed(seed);
+}
+
+int abs(int j) {
+	return (j < 0)? -j : j;
+}
 
 c4_process_t spawn(const char *name, const char *argv[], const char *envp[]){
 	// XXX: fixed-size buffer to store elfs from files, this will limit the size

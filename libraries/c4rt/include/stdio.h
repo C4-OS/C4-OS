@@ -7,6 +7,7 @@
 #include <c4rt/interface/filesystem.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <sys/types.h>
 
 enum {
 	FILE_STATUS_PRETTY_GOOD,
@@ -31,14 +32,33 @@ enum {
 	EBADF,
 };
 
+// XXX: breaking the usual convention of enums for constant definitions
+//      since some ports use the preprocessor to "detect" whether these are
+//      defined and break anyway even if (it thinks) they aren't.
+#define SEEK_SET 0
+#define SEEK_END 1
+#define SEEK_CUR 2
 
+// buffer things
+enum {
+	BUFSIZ = 256
+};
+
+enum {
+	_IOFBF,
+	_IOLBF,
+	_IONBF,
+};
+
+/*
 enum {
 	SEEK_SET,
 };
+*/
 
 // TODO: move posix-y stuff to the proper headers
 typedef uint32_t ino_t;
-typedef uint32_t off_t;
+
 struct dirent {
 	ino_t    d_ino;
 	off_t    d_off;
@@ -80,6 +100,7 @@ size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
 int fputc(int c, FILE *fp);
 int fputs(const char *s, FILE *fp);
 
+int    printf(const char *fmt, ...);
 int   fprintf(FILE *fp, const char *fmt, ...);
 int  vfprintf(FILE *fp, const char *fmt, va_list ap);
 
@@ -94,5 +115,7 @@ int ferror( FILE *fp );
 int fflush(FILE *fp);
 
 extern FILE *stderr;
+extern FILE *stdin;
+extern FILE *stdout;
 
 #endif

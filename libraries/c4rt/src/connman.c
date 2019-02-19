@@ -7,12 +7,7 @@
 #include <c4rt/ringbuffer.h>
 #include <c4rt/andtree.h>
 
-// TODO: this is included for malloc() and stuff, it would probably be a good
-//       idea to have c4 prefixes for the c4rt allocator, both for code
-//       cleanliness and to prevent having problems with conflicting malloc
-//       implementations once a full libc is ported, or people implementing
-//       their own, etc
-#include <c4rt/stublibc.h>
+#include <stdlib.h>
 
 bool c4rt_connman_connect(c4rt_conn_t *conn, uint32_t server){
 	conn->server_port = server;
@@ -114,7 +109,7 @@ static c4rt_conn_t *handle_connect(c4rt_conn_server_t *serv, uint32_t temp){
 	}
 
 	// have a connect request, allocate a new client
-	new_client = calloc(1, sizeof(*new_client));
+	new_client = c4rt_calloc(1, sizeof(*new_client));
 	new_client->client_id = c4rt_prng_u32();
 	andtree_insert(&serv->tree, new_client);
 
@@ -154,7 +149,7 @@ error_out:
 	c4_debug_printf("--- connman: error connecting client %x...",
 	                new_client->client_id);
 	andtree_remove_key(&serv->tree, new_client->client_id);
-	free(new_client);
+	c4rt_free(new_client);
 
 error_preconn:
 	c4_cspace_remove(C4_CURRENT_CSPACE, temp);

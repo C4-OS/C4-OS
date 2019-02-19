@@ -6,27 +6,23 @@
 #include <c4alloc/c4alloc.h>
 #include <c4rt/addrman.h>
 
-enum {
-	RAND_MAX = 2147483647,
-};
+void c4rt_exit(int status);
 
-void exit(int status);
+void *c4rt_malloc( size_t size );
+void c4rt_free( void *ptr );
+void *c4rt_calloc( size_t members, size_t size );
+void *c4rt_realloc( void *ptr, size_t size );
 
-void *malloc( size_t size );
-void free( void *ptr );
-void *calloc( size_t members, size_t size );
-void *realloc( void *ptr, size_t size );
+char *c4rt_getenv(const char *name);
+void c4rt_abort(void);
+int c4rt_atoi(const char *s);
+int c4rt_atexit(void (*func)(void));
 
-char *getenv(const char *name);
-void abort(void);
-int atoi(const char *s);
-int atexit(void (*func)(void));
+int c4rt_rand(void);
+void c4rt_srand(unsigned int seed);
+int c4rt_abs(int j);
 
-int rand(void);
-void srand(unsigned int seed);
-int abs(int j);
-
-// non-C functions
+// non-C functions, so no c4rt_* prefix needed
 c4_process_t spawn(const char *name, const char *argv[], const char *envp[]);
 unsigned getnameserv( void );
 c4a_heap_t *getc4heap( void );

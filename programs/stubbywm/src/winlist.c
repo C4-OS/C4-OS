@@ -1,12 +1,12 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <c4rt/prng.h>
 #include <stubbywm/stubbywm.h>
 
 #include <stddef.h>
+#include <stdlib.h>
 
 window_node_t *window_list_insert(window_list_t *list, window_t *win) {
-	window_node_t *new_node = calloc(1, sizeof(window_node_t));
+	window_node_t *new_node = c4rt_calloc(1, sizeof(window_node_t));
 	C4_ASSERT(new_node != NULL);
 
 	new_node->window = *win;
@@ -43,7 +43,7 @@ void window_list_remove(window_list_t *list, window_node_t *node){
 		list->end = node->prev;
 	}
 
-	free(node);
+	c4rt_free(node);
 }
 
 window_node_t *window_list_find(window_list_t *list, window_t win) {

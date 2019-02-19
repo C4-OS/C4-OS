@@ -1,7 +1,6 @@
 #include <c4alloc/c4alloc.h>
 #include <c4rt/c4rt.h>
 #include <c4rt/compiler.h>
-#include <c4rt/stublibc.h>
 #include <c4rt/elf.h>
 #include <nameserver/nameserver.h>
 #include <c4rt/interface/filesystem.h>
@@ -11,6 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct prognode {
 	char name[FS_MAX_NAME_LEN + 1];

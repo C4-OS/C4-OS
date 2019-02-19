@@ -1,24 +1,25 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
 #include <stdint.h>
 #include <nameserver/nameserver.h>
 #include <c4rt/interface/console.h>
 #include <c4rt/interface/keyboard.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static unsigned display = 0;
 //static unsigned keyboard = 0;
 //static keyboard_t keyboard;
 static uint32_t keyboard;
 
-static void putchar( char c ){
+static void display_char( char c ){
 	console_put_char( display, c );
 }
 
 static void debug_print( const char *s ){
 	for ( ; *s; s++ ){
-		putchar(*s);
+		display_char(*s);
 	}
 }
 
@@ -72,9 +73,9 @@ retry:
 	return buf;
 }
 
-static FILE *cur_include = NULL;
+static c4rt_file_t *cur_include = NULL;
 
-void set_cur_include(FILE *fp) {
+void set_cur_include(c4rt_file_t *fp) {
 	cur_include = fp;
 }
 
@@ -85,7 +86,7 @@ static char *read_include_file(char *buf, unsigned n) {
 		return buf;
 	}
 
-	fgets(buf, n, cur_include);
+	c4rt_fgets(buf, n, cur_include);
 	if (strlen(buf) == 0) {
 		cur_include = NULL;
 	}

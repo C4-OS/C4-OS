@@ -10,112 +10,93 @@
 #include <sys/types.h>
 
 enum {
-	FILE_STATUS_PRETTY_GOOD,
-	FILE_STATUS_CLOSED,
-	FILE_STATUS_END_OF_FILE,
-	FILE_STATUS_ERROR,
+	C4RT_FILE_STATUS_PRETTY_GOOD,
+	C4RT_FILE_STATUS_CLOSED,
+	C4RT_FILE_STATUS_END_OF_FILE,
+	C4RT_FILE_STATUS_ERROR,
 };
 
 enum {
-	FILE_MODE_READ   = 1 << 1,
-	FILE_MODE_WRITE  = 1 << 2,
-	FILE_MODE_APPEND = 1 << 3,
+	C4RT_FILE_MODE_READ   = 1 << 1,
+	C4RT_FILE_MODE_WRITE  = 1 << 2,
+	C4RT_FILE_MODE_APPEND = 1 << 3,
 };
 
 enum {
-	EOF = -1,
+	C4RT_EOF = -1,
 };
 
 // errno errors
 enum {
-	ENONE,
-	EBADF,
-};
-
-// XXX: breaking the usual convention of enums for constant definitions
-//      since some ports use the preprocessor to "detect" whether these are
-//      defined and break anyway even if (it thinks) they aren't.
-#define SEEK_SET 0
-#define SEEK_END 1
-#define SEEK_CUR 2
-
-// buffer things
-enum {
-	BUFSIZ = 256
+	C4RT_ENONE,
+	C4RT_EBADF,
 };
 
 enum {
-	_IOFBF,
-	_IOLBF,
-	_IONBF,
+	C4RT_SEEK_SET = 0,
+	C4RT_SEEK_END = 1,
+	C4RT_SEEK_CUR = 2,
 };
-
-/*
-enum {
-	SEEK_SET,
-};
-*/
 
 // TODO: move posix-y stuff to the proper headers
-typedef uint32_t ino_t;
+typedef uint32_t c4rt_ino_t;
 
-struct dirent {
-	ino_t    d_ino;
-	off_t    d_off;
-	uint16_t d_reclen;
-	uint8_t  d_type;
+struct c4rt_dirent {
+	c4rt_ino_t d_ino;
+	c4rt_off_t d_off;
+	uint16_t   d_reclen;
+	uint8_t    d_type;
 
 	char d_name[256];
 };
 
 // file functions
-typedef struct c_filestruct {
+typedef struct c4rt_filestruct {
 	fs_connection_t conn;
 	fs_node_t node;
 
-	struct dirent dent;
+	struct c4rt_dirent dent;
 	unsigned  status;
 	int       charbuf;
 	char      mode;
 	bool      have_char;
 	bool      used;
-} FILE;
+} c4rt_file_t;
 
-typedef FILE DIR;
-DIR *opendir(const char *name);
-struct dirent *readdir(DIR *dirp);
-int closedir(DIR *dirp);
+typedef c4rt_file_t c4rt_dir_t;
+c4rt_dir_t *c4rt_opendir(const char *name);
+struct c4rt_dirent *c4rt_readdir(c4rt_dir_t *dirp);
+int c4rt_closedir(c4rt_dir_t *dirp);
 
-FILE *fopen( const char *path, const char *mode );
-int   fclose( FILE *fp );
-FILE *freopen( const char *path, const char *mode, FILE *fp );
-size_t fread( void *ptr, size_t size, size_t members, FILE *fp );
-char *fgets( char *s, int size, FILE *stream );
-int   fgetc( FILE *stream );
-int   getc( FILE *stream );
-int   getchar( void );
-int   ungetc( int c, FILE *stream );
+c4rt_file_t *c4rt_fopen( const char *path, const char *mode );
+c4rt_file_t *c4rt_freopen( const char *path, const char *mode, c4rt_file_t *fp );
+size_t c4rt_fread( void *ptr, size_t size, size_t members, c4rt_file_t *fp );
+size_t c4rt_fwrite( const void *ptr, size_t size, size_t members, c4rt_file_t *fp );
+char *c4rt_fgets( char *s, int size, c4rt_file_t *stream );
 
-size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp );
-int fputc(int c, FILE *fp);
-int fputs(const char *s, FILE *fp);
+int c4rt_fclose( c4rt_file_t *fp );
+int c4rt_fgetc( c4rt_file_t *stream );
+int c4rt_getc( c4rt_file_t *stream );
+int c4rt_getchar( void );
+int c4rt_ungetc( int c, c4rt_file_t *stream );
+int c4rt_fputc(int c, c4rt_file_t *fp);
+int c4rt_fputs(const char *s, c4rt_file_t *fp);
 
-int    printf(const char *fmt, ...);
-int   fprintf(FILE *fp, const char *fmt, ...);
-int  vfprintf(FILE *fp, const char *fmt, va_list ap);
+int c4rt_printf(const char *fmt, ...);
+int c4rt_fprintf(c4rt_file_t *fp, const char *fmt, ...);
+int c4rt_vfprintf(c4rt_file_t *fp, const char *fmt, va_list ap);
 
-int fseek(FILE *fp, long offset, int whence);
-int ftell(FILE *fp);
-void rewind(FILE *fp);
-void setbuf(FILE *stream, char *buf);
+int c4rt_fseek(c4rt_file_t *fp, long offset, int whence);
+int c4rt_ftell(c4rt_file_t *fp);
+void c4rt_rewind(c4rt_file_t *fp);
 
-void clearerr( FILE *fp );
-int feof( FILE *fp );
-int ferror( FILE *fp );
-int fflush(FILE *fp);
+void c4rt_clearerr(c4rt_file_t *fp);
+int c4rt_feof(c4rt_file_t *fp);
+int c4rt_ferror(c4rt_file_t *fp);
+int c4rt_fflush(c4rt_file_t *fp);
 
-extern FILE *stderr;
-extern FILE *stdin;
-extern FILE *stdout;
+extern c4rt_file_t *stderr;
+extern c4rt_file_t *stdin;
+extern c4rt_file_t *stdout;
 
 #endif

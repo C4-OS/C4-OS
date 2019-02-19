@@ -1,6 +1,6 @@
 #include <c4rt/addrman.h>
 #include <c4rt/andtree.h>
-#include <c4rt/stublibc.h>
+#include <stdlib.h>
 
 #define PAGE_SIZE 0x1000
 
@@ -17,7 +17,7 @@ static int vnode_get_size(void *a){
 }
 
 static inline c4rt_vnode_t *make_vnode( unsigned size, unsigned offset ){
-	c4rt_vnode_t *ret = calloc(1, sizeof(c4rt_vnode_t));
+	c4rt_vnode_t *ret = c4rt_calloc(1, sizeof(c4rt_vnode_t));
 
 	*ret = (c4rt_vnode_t){
 		.size       = size,
@@ -144,7 +144,7 @@ static inline c4rt_vnode_t *alloc_vnode( c4rt_vaddr_region_t *region,
 }
 
 c4rt_vaddr_region_t *c4rt_vaddr_region_create( uintptr_t base, unsigned pages ){
-	c4rt_vaddr_region_t *ret = calloc(1, sizeof(c4rt_vaddr_region_t));
+	c4rt_vaddr_region_t *ret = c4rt_calloc(1, sizeof(c4rt_vaddr_region_t));
 	c4rt_vnode_t *root = make_vnode(pages, 0);
 
 	ret->base.num = base;

@@ -1,8 +1,8 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <c4rt/interface/framebuffer.h>
 #include <stubbywm/stubbywm.h>
 #include <stubbywm/ppm.h>
+#include <string.h>
 
 // XXX: this does basically no validation on the file and assumes everything
 //      is where it should be, this would be trivially exploited if it's

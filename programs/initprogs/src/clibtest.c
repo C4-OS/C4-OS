@@ -1,5 +1,5 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
+#include <stdio.h>
 
 char buffer[32];
 
@@ -12,11 +12,11 @@ int main( int argc, char *argv[], char *envp[] ){
 	c4_debug_printf( "--- %s: %u args\n", progname, argc );
 
 
-	FILE *foo = fopen( "/sbin/////keyboard", "r" );
+	c4rt_file_t *foo = c4rt_fopen( "/sbin/////keyboard", "r" );
 	c4_debug_printf( "--- %s: got %p\n", progname, foo );
 
 	for ( unsigned k = 0; k < 4; k++ ){
-		size_t nread = fread( buffer, sizeof(buffer), 1, foo );
+		size_t nread = c4rt_fread( buffer, sizeof(buffer), 1, foo );
 
 		for ( unsigned i = 0; i < nread; i++ ){
 			c4_debug_printf( "%x ", (uint8_t)buffer[i] );
@@ -26,7 +26,7 @@ int main( int argc, char *argv[], char *envp[] ){
 	}
 
 	for ( unsigned i = 0; i < 16; i++ ){
-		int c = fgetc( foo );
+		int c = c4rt_fgetc( foo );
 		c4_debug_printf( "--- clibtest: read a character: %x\n", (uint8_t)c );
 	}
 
@@ -36,7 +36,7 @@ int main( int argc, char *argv[], char *envp[] ){
 	}
 	*/
 
-	fclose( foo );
+	c4rt_fclose( foo );
 
 	return 0;
 }

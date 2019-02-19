@@ -1,8 +1,8 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <c4rt/compiler.h>
 #include <c4rt/addrman.h>
 #include <c4alloc/c4alloc.h>
+#include <string.h>
 
 // having a global variable here is ok, because 'env' in _start
 // will be valid for the lifetime of the program
@@ -11,7 +11,7 @@ unsigned global_nameserv = 0;
 c4a_heap_t global_heap;
 c4rt_vaddr_region_t *global_region;
 
-WEAK char *getenv( const char *name ){
+char *c4rt_getenv( const char *name ){
 	if ( !global_env )
 		return NULL;
 
@@ -30,14 +30,14 @@ WEAK char *getenv( const char *name ){
 	return NULL;
 }
 
-WEAK unsigned getnameserv( void ){
+unsigned getnameserv( void ){
 	return global_nameserv;
 }
 
-WEAK c4a_heap_t *getc4heap( void ){
+c4a_heap_t *getc4heap( void ){
 	return &global_heap;
 }
 
-WEAK c4rt_vaddr_region_t *get_genregion(void){
+c4rt_vaddr_region_t *get_genregion(void){
 	return global_region;
 }

@@ -1,10 +1,11 @@
 #include <c4rt/interface/pager.h>
 #include <c4rt/elf.h>
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <c4/paging.h>
 #include <c4/thread.h>
 #include <c4/bootinfo.h>
+
+#include <string.h>
 
 bool elf_is_valid( Elf32_Ehdr *elf ){
 	return elf->e_ident[0] == ELFMAG0

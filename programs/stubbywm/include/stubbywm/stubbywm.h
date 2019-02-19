@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <c4rt/interface/framebuffer.h>
 #include <c4rt/c4rt.h>
+#include <c4rt/mem.h>
 
 enum { MAX_UPDATES = 128, };
 

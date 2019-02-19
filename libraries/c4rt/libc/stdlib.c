@@ -8,38 +8,38 @@
 #include <c4rt/c4rt.h>
 #include <c4rt/prng.h>
 
-WEAK void *malloc( size_t size ){
-	return c4a_alloc( getc4heap(), size );
+void *c4rt_malloc( size_t size ){
+	return c4a_alloc(getc4heap(), size);
 }
 
-WEAK void free( void *ptr ){
-	if ( ptr ){
-		c4a_free( getc4heap(), ptr );
+void c4rt_free( void *ptr ){
+	if (ptr){
+		c4a_free(getc4heap(), ptr);
 	}
 }
 
-void *calloc( size_t members, size_t size ){
-	void *ret = malloc( members * size );
+void *c4rt_calloc( size_t members, size_t size ){
+	void *ret = c4rt_malloc(members * size);
 
 	if ( ret ){
-		memset( ret, 0, members * size );
+		memset(ret, 0, members * size);
 	}
 
 	return ret;
 }
 
 // TODO: implement realloc()
-void *realloc( void *ptr, size_t size );
+void *c4rt_realloc(void *ptr, size_t size);
 
-int rand(void) {
+int c4rt_rand(void) {
 	return (int)c4rt_prng_u32();
 }
 
-void srand(unsigned int seed) {
+void c4rt_srand(unsigned int seed) {
 	c4rt_prng_seed(seed);
 }
 
-int abs(int j) {
+int c4rt_abs(int j) {
 	return (j < 0)? -j : j;
 }
 
@@ -53,7 +53,7 @@ c4_process_t spawn(const char *name, const char *argv[], const char *envp[]){
 	static uint8_t progbuf[PAGE_SIZE * 128] ALIGN_TO(PAGE_SIZE);
 	c4_process_t ret;
 
-	FILE *fp = fopen(name, "r");
+	c4rt_file_t *fp = c4rt_fopen(name, "r");
 
 	C4_ASSERT(fp != NULL);
 	if (!fp) {
@@ -64,11 +64,11 @@ c4_process_t spawn(const char *name, const char *argv[], const char *envp[]){
 	size_t i = 0;
 	int nread = 0;
 
-	while ((nread = fread(progbuf + i, PAGE_SIZE, 1, fp)) > 0) {
+	while ((nread = c4rt_fread(progbuf + i, PAGE_SIZE, 1, fp)) > 0) {
 		i += nread;
 	}
 
-	fclose(fp);
+	c4rt_fclose(fp);
 
 	if (!elf_is_valid((Elf32_Ehdr*)progbuf)) {
 		memset(&ret, 0, sizeof(c4_process_t));

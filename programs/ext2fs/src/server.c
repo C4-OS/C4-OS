@@ -1,8 +1,8 @@
 #include <ext2fs/ext2fs.h>
 #include <c4rt/interface/filesystem.h>
 #include <c4rt/ringbuffer.h>
-#include <c4rt/stublibc.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 // TODO: move these into per-thread datastructures once worker threads are
 //       implemented
@@ -176,7 +176,7 @@ static void handle_restore_state( ext2fs_t *fs, message_t *request ){
 static
 void handle_set_node( ext2fs_t *fs, c4rt_conn_t *conn, message_t *request ){
 	if (!conn->prog_data) {
-		conn->prog_data = calloc(1, sizeof(client_state_t));
+		conn->prog_data = c4rt_calloc(1, sizeof(client_state_t));
 	}
 
 	client_state_t *cli = conn->prog_data;

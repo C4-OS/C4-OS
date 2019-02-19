@@ -1,5 +1,4 @@
 #include <c4rt/c4rt.h>
-#include <c4rt/stublibc.h>
 #include <c4rt/compiler.h>
 #include <c4rt/addrman.h>
 #include <c4alloc/c4alloc.h>

@@ -23,7 +23,7 @@ static inline void init_rootfs( void ){
 
 	initialized = true;
 	char *fallback = "/dev/ext2fs";
-	char *rootdev = getenv("rootfs");
+	char *rootdev = c4rt_getenv("rootfs");
 	unsigned nameserver = getnameserv();
 
 	c4_debug_printf("--- thread %u: nameserver at %u\n", c4_get_id(), nameserver);
@@ -58,9 +58,9 @@ static unsigned translate_modeflags( const char *mode ){
 
 	for (unsigned i = 0; mode[i]; i++) {
 		switch (mode[i]) {
-			case 'r': ret |= FILE_MODE_READ;   break;
-			case 'w': ret |= FILE_MODE_WRITE;  break;
-			case '+': ret |= FILE_MODE_APPEND; break;
+			case 'r': ret |= C4RT_FILE_MODE_READ;   break;
+			case 'w': ret |= C4RT_FILE_MODE_WRITE;  break;
+			case '+': ret |= C4RT_FILE_MODE_APPEND; break;
 			default:  break;
 		}
 	}
@@ -68,10 +68,10 @@ static unsigned translate_modeflags( const char *mode ){
 	return ret;
 }
 
-FILE *fopen( const char *path, const char *mode ){
+c4rt_file_t *c4rt_fopen( const char *path, const char *mode ){
 	init_rootfs();
 
-	FILE *ret = NULL;
+	c4rt_file_t *ret = NULL;
 	char namebuf[FS_MAX_NAME_LEN + 1];
 	fs_node_t temp = (*path == '/')? root_dir : current_dir;
 
@@ -81,7 +81,7 @@ FILE *fopen( const char *path, const char *mode ){
 	//fs_connect( root_server, fs_buffer, &conn );
 	//fs_connect( root_server, fs_buffer, &conn );
 	*/
-	c4_debug_printf("--- fopen(): path: \"%s\"...\n", path);
+	c4_debug_printf("--- c4rt_fopen(): path: \"%s\"...\n", path);
 
 	for ( int found = 1; found > 0; ){
 		while ( *path == '/' ) path++;
@@ -89,9 +89,9 @@ FILE *fopen( const char *path, const char *mode ){
 		size_t maxlen = sizeof( namebuf );
 
 		if ( foo == 0 ){
-			ret          = calloc( 1, sizeof( FILE ));
+			ret          = c4rt_calloc(1, sizeof(c4rt_file_t));
 			//ret->server  = conn.server;
-			ret->status  = FILE_STATUS_PRETTY_GOOD;
+			ret->status  = C4RT_FILE_STATUS_PRETTY_GOOD;
 			ret->node    = temp;
 			ret->charbuf = '\0';
 			ret->mode    = translate_modeflags( mode );
@@ -110,7 +110,7 @@ FILE *fopen( const char *path, const char *mode ){
 		fs_set_node(&current_fs, &temp);
 
 		strlcpy(namebuf, path, (foo + 1 < maxlen)? foo + 1 : maxlen);
-		c4_debug_printf("--- fopen(): looking for \"%s\"...\n", namebuf);
+		c4_debug_printf("--- c4rt_fopen(): looking for \"%s\"...\n", namebuf);
 		found = fs_find_name(&current_fs, &temp, namebuf, foo);
 		path += foo;
 
@@ -124,18 +124,18 @@ FILE *fopen( const char *path, const char *mode ){
 	return ret;
 }
 
-int fclose( FILE *fp ){
+int c4rt_fclose(c4rt_file_t *fp) {
 	if (fp) {
-		fp->status = FILE_STATUS_CLOSED;
+		fp->status = C4RT_FILE_STATUS_CLOSED;
 		fs_disconnect(&fp->conn);
-		free(fp);
+		c4rt_free(fp);
 	}
 
 	return 0;
 }
 
-FILE *freopen( const char *path, const char *mode, FILE *fp ){
-	FILE *temp = fopen( path, mode );
+c4rt_file_t *c4rt_freopen(const char *path, const char *mode, c4rt_file_t *fp) {
+	c4rt_file_t *temp = c4rt_fopen( path, mode );
 
 	if (temp) {
 		fs_disconnect(&fp->conn);
@@ -147,12 +147,12 @@ FILE *freopen( const char *path, const char *mode, FILE *fp ){
 	return NULL;
 }
 
-DIR *opendir(const char *name){
+c4rt_dir_t *c4rt_opendir(const char *name){
 	// TODO: check that it's actually a directory
-	return fopen(name, "r");
+	return c4rt_fopen(name, "r");
 }
 
-struct dirent *readdir(DIR *dirp) {
+struct c4rt_dirent *c4rt_readdir(c4rt_dir_t *dirp) {
 	fs_dirent_t dirent;
 
 	if (fs_next_dirent(&dirp->conn, &dirent) <= 0) {
@@ -160,18 +160,18 @@ struct dirent *readdir(DIR *dirp) {
 	}
 
 	strlcpy(dirp->dent.d_name, dirent.name, 256);
-	dirp->dent.d_reclen = sizeof(struct dirent);
+	dirp->dent.d_reclen = sizeof(struct c4rt_dirent);
 	dirp->dent.d_ino    = dirent.inode;
 	dirp->dent.d_off    = 0;
 
 	return &dirp->dent;
 }
 
-int closedir(DIR *dirp){
-	return fclose(dirp);
+int c4rt_closedir(c4rt_dir_t *dirp){
+	return c4rt_fclose(dirp);
 }
 
-size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
+size_t c4rt_fread(void *ptr, size_t size, size_t members, c4rt_file_t *fp) {
 	//fs_connection_t conn = {};
 	uint8_t *buffer = ptr;
 	size_t len = size * members;
@@ -187,7 +187,9 @@ size_t fread( void *ptr, size_t size, size_t members, FILE *fp ){
 	return ret;
 }
 
-size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp ){
+size_t c4rt_fwrite(const void *ptr, size_t size,
+                   size_t members, c4rt_file_t *fp)
+{
 	//fs_connection_t conn = {};
 	const uint8_t *buffer = ptr;
 	size_t len = size * members;
@@ -201,66 +203,65 @@ size_t fwrite( const void *ptr, size_t size, size_t members, FILE *fp ){
 	}
 
 	return ret;
-
 }
 
-int fputc(int c, FILE *fp){
+int c4rt_fputc(int c, c4rt_file_t *fp){
 	unsigned char wr = c;
-	fwrite(&wr, 1, 1, fp);
+	c4rt_fwrite(&wr, 1, 1, fp);
 	return c;
 }
 
-int fputs(const char *s, FILE *fp){
-	return fwrite(s, strlen(s), 1, fp);
+int c4rt_fputs(const char *s, c4rt_file_t *fp){
+	return c4rt_fwrite(s, strlen(s), 1, fp);
 }
 
-char *fgets( char *s, int size, FILE *stream ){
+char *c4rt_fgets( char *s, int size, c4rt_file_t *stream ){
 	size_t n = 0;
-	char c = fgetc( stream );
+	char c = c4rt_fgetc( stream );
 
-	while ( !feof(stream) && n < size - 1 ){
+	while ( !c4rt_feof(stream) && n < size - 1 ){
 		s[n++] = c;
 
 		if ( c == '\n' )
 			break;
 
-		c = fgetc( stream );
+		c = c4rt_fgetc( stream );
 	}
 
 	s[n] = '\0';
 	return s;
 }
 
-int fgetc( FILE *stream ){
-	if ( stream->status != FILE_STATUS_PRETTY_GOOD ){
-		return -EBADF;
+int c4rt_fgetc( c4rt_file_t *stream ){
+	if ( stream->status != C4RT_FILE_STATUS_PRETTY_GOOD ){
+		return -C4RT_EBADF;
 	}
 
 	char c;
-	size_t nread = fread( &c, 1, 1, stream );
+	size_t nread = c4rt_fread( &c, 1, 1, stream );
 
 	if ( nread > 0 ){
 		return c;
 
 	} else {
-		stream->status = FILE_STATUS_END_OF_FILE;
-		return EOF;
+		stream->status = C4RT_FILE_STATUS_END_OF_FILE;
+		return C4RT_EOF;
 	}
 }
 
-int getc( FILE *stream ){
-	return fgetc( stream );
+int c4rt_getc( c4rt_file_t *stream ){
+	return c4rt_fgetc( stream );
 }
 
-int getchar( void );
-int ungetc( int c, FILE *stream );
+int c4rt_getchar( void );
+int c4rt_ungetc( int c, c4rt_file_t *stream );
 
-void clearerr( FILE *fp );
+void c4rt_clearerr( c4rt_file_t *fp );
 
-int feof( FILE *fp ){
-	return fp->status == FILE_STATUS_END_OF_FILE;
+int c4rt_feof( c4rt_file_t *fp ){
+	return fp->status == C4RT_FILE_STATUS_END_OF_FILE;
 }
 
-int ferror( FILE *fp ){
-	return fp->status != FILE_STATUS_PRETTY_GOOD;
+int c4rt_ferror( c4rt_file_t *fp ){
+	return fp->status != C4RT_FILE_STATUS_PRETTY_GOOD;
 }

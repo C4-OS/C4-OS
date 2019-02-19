@@ -4,6 +4,8 @@
 #include <stddef.h>
 
 // string functions
+// TODO: do these need c4rt_* prefixes if the
+//       implementations are weakly defined?
 void *memcpy(void *dest, const void *src, size_t n);
 void *memset(void *s, int c, size_t n);
 size_t strlen(const char *s);

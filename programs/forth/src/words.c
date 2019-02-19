@@ -228,102 +228,102 @@ static bool c4_minift_open_file( minift_vm_t *vm ){
 	char *fam  = popptr( vm );
 	char *name = popptr( vm );
 
-	FILE *fp = fopen( name, fam );
+	c4rt_file_t *fp = c4rt_fopen(name, fam);
 
-	pushptr( vm, fp );
-	pushnum( vm, fp? 0 : 1 );
-
-	return true;
-}
-
-static bool c4_minift_close_file( minift_vm_t *vm ){
-	fclose( popptr( vm ));
+	pushptr(vm, fp);
+	pushnum(vm, fp? 0 : 1);
 
 	return true;
 }
 
-static bool c4_minift_read_file( minift_vm_t *vm ){
-	FILE *fp          = popptr( vm );
-	unsigned long len = popnum( vm );
-	char *buf         = popptr( vm );
-
-	unsigned long n = fread( buf, len, 1, fp );
-
-	pushnum( vm, n );
-	pushnum( vm, ferror(fp) );
+static bool c4_minift_close_file(minift_vm_t *vm){
+	c4rt_fclose(popptr(vm));
 
 	return true;
 }
 
-static bool c4_minift_read_line( minift_vm_t *vm ){
-	FILE *fp          = popptr( vm );
-	unsigned long len = popnum( vm );
-	char *buf         = popptr( vm );
+static bool c4_minift_read_file(minift_vm_t *vm) {
+	c4rt_file_t *fp   = popptr(vm);
+	unsigned long len = popnum(vm);
+	char *buf         = popptr(vm);
 
-	fgets( buf, len, fp );
+	unsigned long n = c4rt_fread(buf, len, 1, fp);
 
-	pushnum( vm, strlen(buf) );
-	pushnum( vm, ferror(fp) );
-
-	return true;
-}
-
-static bool c4_minift_write_file( minift_vm_t *vm ){
-	FILE *fp          = popptr( vm );
-	unsigned long len = popnum( vm );
-	char *buf         = popptr( vm );
-
-	unsigned long n = fwrite( buf, len, 1, fp );
-
-	pushnum( vm, n );
-	pushnum( vm, ferror(fp) );
+	pushnum(vm, n);
+	pushnum(vm, c4rt_ferror(fp));
 
 	return true;
 }
 
-static bool c4_minift_write_line( minift_vm_t *vm ){
-	FILE *fp  = popptr(vm);
-	char *buf = popptr(vm);
+static bool c4_minift_read_line(minift_vm_t *vm) {
+	c4rt_file_t *fp   = popptr(vm);
+	unsigned long len = popnum(vm);
+	char *buf         = popptr(vm);
 
-	fputs(buf, fp);
-	fputc('\n', fp);
+	c4rt_fgets(buf, len, fp);
 
 	pushnum(vm, strlen(buf));
-	pushnum(vm, ferror(fp));
+	pushnum(vm, c4rt_ferror(fp));
 
 	return true;
 }
 
-extern void set_cur_include( FILE *fp );
+static bool c4_minift_write_file(minift_vm_t *vm) {
+	c4rt_file_t *fp   = popptr(vm);
+	unsigned long len = popnum(vm);
+	char *buf         = popptr(vm);
 
-static bool c4_minift_include_file( minift_vm_t *vm ){
-	set_cur_include( popptr( vm ));
+	unsigned long n = c4rt_fwrite(buf, len, 1, fp);
+
+	pushnum(vm, n);
+	pushnum(vm, c4rt_ferror(fp));
 
 	return true;
 }
 
-static bool c4_minift_open_dir( minift_vm_t *vm ){
-	char *name = popptr( vm );
-	DIR *dir = opendir(name);
+static bool c4_minift_write_line(minift_vm_t *vm) {
+	c4rt_file_t *fp = popptr(vm);
+	char *buf       = popptr(vm);
+
+	c4rt_fputs(buf, fp);
+	c4rt_fputc('\n', fp);
+
+	pushnum(vm, strlen(buf));
+	pushnum(vm, c4rt_ferror(fp));
+
+	return true;
+}
+
+extern void set_cur_include( c4rt_file_t *fp );
+
+static bool c4_minift_include_file(minift_vm_t *vm) {
+	set_cur_include(popptr(vm));
+
+	return true;
+}
+
+static bool c4_minift_open_dir(minift_vm_t *vm) {
+	char *name = popptr(vm);
+	c4rt_dir_t *dir = c4rt_opendir(name);
 
 	pushptr(vm, dir);
-	pushnum(vm, dir? 0 : 1 );
+	pushnum(vm, dir? 0 : 1);
 
 	return true;
 }
 
-static bool c4_minift_read_dir( minift_vm_t *vm ){
-	DIR *dir = popptr( vm );
-	struct dirent *dirp = readdir(dir);
+static bool c4_minift_read_dir(minift_vm_t *vm) {
+	c4rt_dir_t *dir = popptr(vm);
+	struct c4rt_dirent *dirp = c4rt_readdir(dir);
 
 	pushptr(vm, dirp);
-	pushnum(vm, dirp? 0 : 1 );
+	pushnum(vm, dirp? 0 : 1);
 
 	return true;
 }
 
-static bool c4_minift_close_dir( minift_vm_t *vm ){
-	closedir( popptr( vm ));
+static bool c4_minift_close_dir(minift_vm_t *vm) {
+	c4rt_closedir(popptr(vm));
 
 	return true;
 }

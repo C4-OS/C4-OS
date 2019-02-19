@@ -1,4 +1,4 @@
-#include <c4rt/stublibc.h>
+#include <c4rt/c4rt.h>
 #include <stdint.h>
 
 WEAK void *memcpy( void *dest, const void *src, size_t n ){

@@ -1,5 +1,7 @@
 #include <c4rt/andtree.h>
-#include <c4rt/stublibc.h>
+#include <c4rt/c4rt.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*
 #include <stdlib.h>
@@ -285,7 +287,7 @@ static inline void do_remove_node( c4rt_andtree_t *tree,
 	}
 
 	replace_in_parent(node, replacement);
-	free(node);
+	c4rt_free(node);
 	tree->nodes--;
 
 }
@@ -390,7 +392,7 @@ void andtree_remove_repair( c4rt_andtree_t *tree, c4rt_andnode_t *node ){
 
 
 static inline c4rt_andnode_t *make_andnode( void *data ){
-	c4rt_andnode_t *ret = calloc(1, sizeof(c4rt_andnode_t));
+	c4rt_andnode_t *ret = c4rt_calloc(1, sizeof(c4rt_andnode_t));
 
 	ret->data = data;
 	ret->level = 1;
